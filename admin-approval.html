@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>NBA Awka application review</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 flex items-center justify-center p-6">
+  <main class="max-w-lg w-full bg-white rounded-xl shadow p-8">
+    <h1 class="text-2xl font-bold text-slate-900">Membership application review</h1>
+    <p class="mt-3 text-slate-700">Any one configured administrator can approve an application. The applicant must also verify their email before signing in. A rejection declines the pending application.</p>
+    <div class="mt-6 flex gap-3">
+      <button id="approve" class="flex-1 bg-green-700 text-white rounded-lg px-4 py-3 font-semibold">Approve application</button>
+      <button id="reject" class="flex-1 bg-red-700 text-white rounded-lg px-4 py-3 font-semibold">Reject application</button>
+    </div>
+    <p id="status" role="status" class="mt-5 text-slate-700"></p>
+  </main>
+  <script>
+    const API = window.NBA_MEMBER_API || '/api';
+    const token = new URLSearchParams(location.search).get('token');
+    const statusEl = document.getElementById('status');
+    async function decide(decision) {
+      if (!token) { statusEl.textContent = 'This review link is missing its token. Contact the Secretariat.'; return; }
+      const buttons = [document.getElementById('approve'), document.getElementById('reject')];
+      buttons.forEach(button => button.disabled = true);
+      try {
+        const response = await fetch(`${API}/admin/decision`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token,decision}) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Unable to record the decision.');
+        statusEl.textContent = data.message;
+        history.replaceState({}, '', location.pathname);
+      } catch (error) {
+        statusEl.textContent = error.message;
+        buttons.forEach(button => button.disabled = false);
+      }
+    }
+    document.getElementById('approve').addEventListener('click', () => decide('approved'));
+    document.getElementById('reject').addEventListener('click', () => decide('rejected'));
+  </script>
+</body>
+</html>

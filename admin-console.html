@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>NBA Awka admin portal</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="min-h-screen bg-slate-100 flex items-center justify-center p-6">
+ <main class="max-w-xl w-full bg-white rounded-2xl shadow p-8">
+  <h1 class="text-2xl font-bold text-slate-900">NBA Awka admin portal</h1>
+  <p class="mt-2 text-slate-600">Sign in to invite the remaining administrators. Application approval links are sent to configured admins by email.</p>
+  <section id="login-panel" class="mt-6">
+   <form id="bootstrap-request" class="border-b pb-6 mb-6">
+    <h2 class="font-semibold">Initial admin setup</h2><p class="text-sm text-slate-600 mt-1">The address configured in Vercel can request a one-time setup link.</p>
+    <label class="block text-sm mt-3" for="bootstrap-email">Initial admin email</label><input id="bootstrap-email" type="email" required class="w-full border rounded-lg p-3 mt-1">
+    <button class="mt-3 bg-slate-700 text-white rounded-lg px-4 py-2">Email setup link</button>
+   </form>
+   <form id="login-form" class="space-y-3"><h2 class="font-semibold">Admin sign in</h2><label class="block text-sm" for="email">Email</label><input id="email" type="email" required class="w-full border rounded-lg p-3"><label class="block text-sm" for="password">Password</label><input id="password" type="password" required class="w-full border rounded-lg p-3"><button class="w-full bg-blue-900 text-white rounded-lg p-3 font-semibold">Sign in</button></form>
+  </section>
+  <section id="admin-panel" class="hidden mt-6">
+   <div class="flex justify-between items-center"><p id="who" class="font-medium"></p><button id="logout" class="text-sm underline">Sign out</button></div>
+   <div class="mt-5 rounded-lg bg-slate-50 p-4"><h2 class="font-semibold">Administrator seats</h2><p id="admin-count" class="text-sm text-slate-600 mt-1"></p><ul id="admins" class="list-disc ml-5 mt-2 text-sm"></ul></div>
+   <form id="invite-form" class="mt-5 space-y-3"><h2 class="font-semibold">Invite an administrator</h2><p class="text-sm text-slate-600">The initial admin can invite up to three additional admins. Each receives a one-use email link to set their own password.</p><label class="block text-sm" for="invite-email">Admin email</label><input id="invite-email" type="email" required class="w-full border rounded-lg p-3"><button class="bg-blue-900 text-white rounded-lg px-4 py-3 font-semibold">Send invitation</button></form>
+  </section>
+  <p id="message" role="status" class="mt-5 text-sm"></p>
+ </main>
+ <script>
+ const API='/api', msg=document.getElementById('message');
+ async function call(path,body){const r=await fetch(API+path,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d;}
+ async function load(){const r=await fetch(API+'/admin/me',{credentials:'include'});if(!r.ok)return;const d=await r.json();document.getElementById('login-panel').classList.add('hidden');document.getElementById('admin-panel').classList.remove('hidden');document.getElementById('who').textContent=`Signed in as ${d.admin.email} (${d.admin.role})`;document.getElementById('admin-count').textContent=`${d.admins.length} of ${d.maxAdmins} seats used`;document.getElementById('admins').replaceChildren(...d.admins.map(a=>{const li=document.createElement('li');li.textContent=`${a.email} — ${a.role}`;return li;}));if(d.admin.role!=='owner'||d.admins.length>=d.maxAdmins)document.getElementById('invite-form').classList.add('hidden');}
+ document.getElementById('bootstrap-request').addEventListener('submit',async e=>{e.preventDefault();try{const d=await call('/admin/bootstrap/request',{email:document.getElementById('bootstrap-email').value});msg.textContent=d.message;}catch(x){msg.textContent=x.message;}});
+ document.getElementById('login-form').addEventListener('submit',async e=>{e.preventDefault();try{await call('/admin/login',{email:document.getElementById('email').value,password:document.getElementById('password').value});await load();msg.textContent='Admin signed in.';}catch(x){msg.textContent=x.message;}});
+ document.getElementById('invite-form').addEventListener('submit',async e=>{e.preventDefault();try{const d=await call('/admin/invitations',{email:document.getElementById('invite-email').value});msg.textContent=d.message;e.currentTarget.reset();await load();}catch(x){msg.textContent=x.message;}});
+ document.getElementById('logout').addEventListener('click',async()=>{try{await call('/admin/logout',{});}finally{location.reload();}});load();
+ </script>
+</body></html>

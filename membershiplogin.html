@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Login | NBA Awka Branch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        nba: {
+                            gold: '#D4AF37',
+                            darkgold: '#B8960C',
+                            navy: '#1B365D',
+                            darknavy: '#0F1F33',
+                            cream: '#F5F5DC',
+                            lightgray: '#F8F9FA'
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Playfair Display', 'serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #d4af37;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .otp-input {
+            width: 3rem;
+            height: 3rem;
+            text-align: center;
+            font-size: 1.5rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            margin: 0 0.25rem;
+        }
+
+        .otp-input:focus {
+            border-color: #D4AF37;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+        }
+    </style>
+    <base target="_blank">
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen font-sans">
+
+    <nav class="bg-nba-navy text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-20">
+                <a href="index.html" class="flex items-center space-x-3">
+                    <div class="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden">
+                        <img src="img/logo1.png" alt="NBA Awka Logo" class="w-20 h-20 object-contain"
+                            onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fas fa-balance-scale text-nba-gold text-xl\'></i>'">
+                    </div>
+                    <div>
+                        <h1 class="font-serif font-bold text-xl leading-tight">NBA AWKA</h1>
+                        <p class="text-xs text-gray-300">Nigerian Bar Association</p>
+                    </div>
+                </a>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="hover:text-nba-gold transition">Home</a>
+                    <a href="about.html" class="hover:text-nba-gold transition">About</a>
+                    <a href="events.html" class="text-nba-gold font-medium">Events</a>
+                    <a href="blog.html" class="hover:text-nba-gold transition">Blog</a>
+                    <a href="membershiplogin.html"
+                        class="px-4 py-2 bg-nba-gold text-nba-navy rounded hover:bg-yellow-500 transition">Member
+                        Login</a>
+                </div>
+                <button id="mobile-menu-btn" class="md:hidden text-white text-2xl z-50 p-2 focus:outline-none"
+                    aria-label="Toggle Menu"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <div id="mobile-menu" class="hidden md:hidden fixed top-20 left-0 w-full bg-white z-[1050] shadow-lg">
+        <div class="flex flex-col space-y-4 p-6 text-lg">
+            <a href="index.html" class="hover:text-nba-gold">Home</a>
+            <a href="about.html" class="hover:text-nba-gold">About</a>
+            <a href="events.html" class="text-nba-gold font-medium">Events</a>
+            <a href="blog.html" class="hover:text-nba-gold">Blog</a>
+            <a href="membershiplogin.html" class="px-4 py-2 bg-nba-gold text-nba-navy rounded text-center">Member
+                Login</a>
+        </div>
+    </div>
+
+    <main class="container mx-auto px-4 py-12 flex items-center justify-center min-h-[calc(100vh-64px-300px)]">
+        <div class="w-full max-w-md">
+
+            <!-- LOGIN VIEW -->
+            <div id="login-view">
+                <div class="text-center mb-8">
+                    <div
+                        class="inline-flex items-center justify-center w-16 h-16 bg-nba-darknavy rounded-full mb-4 shadow-lg">
+                        <i class="fas fa-user-tie text-nba-gold text-2xl"></i>
+                    </div>
+                    <h2 class="font-serif font-bold text-3xl text-nba-darknavy mb-2">Member Login</h2>
+                    <p class="text-gray-600">Access your NBA Awka member portal</p>
+                </div>
+                <div class="glass-effect rounded-2xl shadow-2xl p-8 border border-white/50">
+                    <div id="alert-container" class="mb-6 hidden"></div>
+                    <form id="login-form" class="space-y-6" novalidate>
+                        <div>
+                            <label for="login-identifier" class="block text-sm font-medium text-gray-700 mb-2">Email
+                                Address or Membership ID</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i
+                                        class="fas fa-id-card text-gray-400"></i></div>
+                                <input type="text" id="login-identifier" name="identifier"
+                                    class="input-focus w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold transition bg-white/50"
+                                    placeholder="e.g., john.doe@email.com or SCN12345" autocomplete="username">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="login-password"
+                                class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i
+                                        class="fas fa-lock text-gray-400"></i></div>
+                                <input type="password" id="login-password" name="password"
+                                    class="input-focus w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold transition bg-white/50"
+                                    placeholder="Enter your password" autocomplete="current-password">
+                                <button type="button" id="toggle-login-password"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition"><i
+                                        class="fas fa-eye" id="login-eye-icon"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="remember-me"
+                                    class="w-4 h-4 text-nba-gold border-gray-300 rounded focus:ring-nba-gold focus:ring-2">
+                                <span class="ml-2 text-sm text-gray-600">Remember me</span>
+                            </label>
+                            <button type="button" id="forgot-password-link"
+                                class="text-sm text-nba-darknavy hover:text-nba-gold font-medium transition">Forgot
+                                password?</button>
+                        </div>
+                        <button type="submit" id="login-btn"
+                            class="w-full bg-nba-darknavy text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-nba-gold focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="login-btn-text">Sign In</span>
+                            <div id="login-btn-spinner" class="loading-spinner hidden"></div>
+                        </button>
+                    </form>
+                    <div class="relative my-6">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm"><span class="px-2 bg-white text-gray-500">New
+                                member?</span></div>
+                    </div>
+                    <button type="button" id="show-register-btn"
+                        class="block w-full text-center py-3 px-4 border-2 border-nba-gold text-nba-darknavy rounded-lg font-semibold hover:bg-nba-gold hover:text-white transition-all duration-200">Activate
+                        Your Membership</button>
+                    <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-info-circle text-nba-darknavy mt-0.5"></i>
+                            <div class="text-sm text-gray-600">
+                                <p class="font-medium text-nba-darknavy mb-1">Need Help?</p>
+                                <p>Contact the Secretariat at <a href="tel:+2348033912398"
+                                        class="text-nba-darknavy hover:underline font-medium">+234 8033912398</a> or
+                                    email <a href="mailto:nbaawka@gmail.com"
+                                        class="text-nba-darknavy hover:underline font-medium">nbaawka@gmail.com</a></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REGISTRATION VIEW -->
+            <div id="register-view" class="hidden">
+                <div class="text-center mb-8">
+                    <div
+                        class="inline-flex items-center justify-center w-16 h-16 bg-nba-gold rounded-full mb-4 shadow-lg">
+                        <i class="fas fa-user-plus text-white text-2xl"></i></div>
+                    <h2 class="font-serif font-bold text-3xl text-nba-darknavy mb-2">Activate Membership</h2>
+                    <p class="text-gray-600">Create your member portal account</p>
+                </div>
+                <div class="glass-effect rounded-2xl shadow-2xl p-8 border border-white/50">
+                    <div id="register-alert-container" class="mb-6 hidden"></div>
+                    <form id="register-form" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">First Name</label><input
+                                    type="text" id="reg-firstname"
+                                    class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                    required></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label><input
+                                    type="text" id="reg-lastname"
+                                    class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                    required></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input
+                                type="email" id="reg-email"
+                                class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                required></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label><input
+                                type="tel" id="reg-phone"
+                                class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                placeholder="+234..." required></div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Year of Call</label>
+                            <input type="number" id="reg-year-of-call"
+                                class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                placeholder="e.g., 2015" min="1900" max="2099" required>
+                            <p class="text-xs text-gray-500 mt-1">This determines your dues amount</p>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Membership ID</label><input
+                                type="text" id="reg-membership-id"
+                                class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                placeholder="SCN12345" required>
+                            <p class="text-xs text-gray-500 mt-1">Enter your official NBA Awka Membership ID</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Create Password</label>
+                            <div class="relative">
+                                <input type="password" id="reg-password"
+                                    class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                    required>
+                                <button type="button" onclick="togglePassword('reg-password', this)"
+                                    class="absolute inset-y-0 right-0 pr-3 text-gray-400 hover:text-gray-600"><i
+                                        class="fas fa-eye"></i></button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Min 8 chars, 1 uppercase, 1 number, 1 special char</p>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label><input
+                                type="password" id="reg-confirm-password"
+                                class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                required></div>
+                        <button type="submit" id="register-btn"
+                            class="w-full bg-nba-gold text-nba-darknavy py-3 px-4 rounded-lg font-semibold hover:bg-yellow-500 transition flex items-center justify-center space-x-2">
+                            <span id="register-btn-text">Activate Account</span>
+                            <div id="register-btn-spinner" class="loading-spinner hidden"></div>
+                        </button>
+                    </form>
+                    <p class="mt-4 text-center text-sm text-gray-600">Already have an account? <button type="button"
+                            id="show-login-from-register" class="text-nba-darknavy hover:text-nba-gold font-medium">Sign
+                            In</button></p>
+                </div>
+            </div>
+
+            <!-- FORGOT PASSWORD VIEW -->
+            <div id="forgot-view" class="hidden">
+                <div class="text-center mb-8">
+                    <div
+                        class="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4 shadow-lg">
+                        <i class="fas fa-key text-orange-600 text-2xl"></i></div>
+                    <h2 class="font-serif font-bold text-3xl text-nba-darknavy mb-2">Reset Password</h2>
+                    <p class="text-gray-600">Recover access to your account</p>
+                </div>
+                <div class="glass-effect rounded-2xl shadow-2xl p-8 border border-white/50">
+                    <div id="forgot-step-1">
+                        <p class="text-sm text-gray-600 mb-4">Enter your email address or Membership ID. We'll send you
+                            a verification code.</p>
+                        <div id="forgot-alert-container" class="mb-4 hidden"></div>
+                        <form id="forgot-form" class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Email or Membership
+                                    ID</label><input type="text" id="forgot-identifier"
+                                    class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                    placeholder="Enter your registered email or SCN12345" required></div>
+                            <button type="submit" id="forgot-submit-btn"
+                                class="w-full bg-nba-darknavy text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-900 transition flex items-center justify-center space-x-2">
+                                <span id="forgot-btn-text">Send Verification Code</span>
+                                <div id="forgot-btn-spinner" class="loading-spinner hidden"></div>
+                            </button>
+                        </form>
+                    </div>
+                    <div id="forgot-step-2" class="hidden">
+                        <p class="text-sm text-gray-600 mb-4">Enter the 6-digit code sent to your registered
+                            email/phone.</p>
+                        <div id="otp-alert-container" class="mb-4 hidden"></div>
+                        <form id="otp-form" class="space-y-4">
+                            <div class="flex justify-center space-x-2 mb-4">
+                                <input type="text" maxlength="1" class="otp-input" data-index="0">
+                                <input type="text" maxlength="1" class="otp-input" data-index="1">
+                                <input type="text" maxlength="1" class="otp-input" data-index="2">
+                                <input type="text" maxlength="1" class="otp-input" data-index="3">
+                                <input type="text" maxlength="1" class="otp-input" data-index="4">
+                                <input type="text" maxlength="1" class="otp-input" data-index="5">
+                            </div>
+                            <div class="text-center mb-4">
+                                <p class="text-sm text-gray-600">Didn't receive code? <button type="button"
+                                        id="resend-otp"
+                                        class="text-nba-darknavy hover:text-nba-gold font-medium">Resend</button></p>
+                                <p id="otp-timer" class="text-xs text-gray-500 mt-1"></p>
+                            </div>
+                            <button type="submit" id="otp-submit-btn"
+                                class="w-full bg-nba-darknavy text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-900 transition">Verify
+                                Code</button>
+                        </form>
+                    </div>
+                    <div id="forgot-step-3" class="hidden">
+                        <p class="text-sm text-gray-600 mb-4">Create a new password for your account.</p>
+                        <div id="reset-alert-container" class="mb-4 hidden"></div>
+                        <form id="reset-form" class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                                <div class="relative"><input type="password" id="new-password"
+                                        class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                        required><button type="button" onclick="togglePassword('new-password', this)"
+                                        class="absolute inset-y-0 right-0 pr-3 text-gray-400 hover:text-gray-600"><i
+                                            class="fas fa-eye"></i></button></div>
+                            </div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Confirm New
+                                    Password</label><input type="password" id="confirm-new-password"
+                                    class="input-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-nba-gold"
+                                    required></div>
+                            <button type="submit" id="reset-submit-btn"
+                                class="w-full bg-nba-gold text-nba-darknavy py-3 px-4 rounded-lg font-semibold hover:bg-yellow-500 transition flex items-center justify-center space-x-2">
+                                <span id="reset-btn-text">Reset Password</span>
+                                <div id="reset-btn-spinner" class="loading-spinner hidden"></div>
+                            </button>
+                        </form>
+                    </div>
+                    <p class="mt-4 text-center text-sm text-gray-600">Remember your password? <button type="button"
+                            id="back-to-login" class="text-nba-darknavy hover:text-nba-gold font-medium">Back to
+                            Login</button></p>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center">
+                <div class="inline-flex items-center space-x-2 text-gray-500 text-sm"><i
+                        class="fas fa-shield-alt text-nba-gold"></i><span>Secure 256-bit SSL Encrypted Connection</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-nba-darknavy text-white py-8 mt-auto">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-gray-400 text-sm">&copy; 2026 Nigerian Bar Association, Awka Branch. All Rights Reserved.</p>
+            <div class="mt-2 space-x-4 text-sm text-gray-500"><a href="#" class="hover:text-nba-gold transition">Privacy
+                    Policy</a><span>|</span><a href="#" class="hover:text-nba-gold transition">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const CONFIG = { SESSION_DURATION: 24 * 60 * 60 * 1000, MAX_ATTEMPTS: 5, LOCKOUT_DURATION: 15 * 60 * 1000, OTP_DURATION: 10 * 60 * 1000 };
+        let currentUser = null, resetIdentifier = null, resetOTP = null, otpExpiry = null;
+
+        function generateMembershipId() { const random = Math.floor(10000 + Math.random() * 90000); return 'NBA/AWK/' + random; }
+        function generateOTP() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+        function validateEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
+        function validateMembershipId(id) { return /^SCN\d{5,}$/i.test(id); }
+        function validateIdentifier(value) { return validateEmail(value) || validateMembershipId(value); }
+        function validatePassword(password) { const minLength = password.length >= 8; const hasUpper = /[A-Z]/.test(password); const hasNumber = /\d/.test(password); const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password); return minLength && hasUpper && hasNumber && hasSpecial; }
+
+        function getUsers() { return JSON.parse(localStorage.getItem('nba_users') || '[]'); }
+        function saveUser(user) {
+            const users = getUsers();
+            const existingIndex = users.findIndex(u => u.email === user.email || u.membershipId === user.membershipId);
+            if (existingIndex >= 0) users[existingIndex] = { ...users[existingIndex], ...user };
+            else users.push(user);
+            localStorage.setItem('nba_users', JSON.stringify(users));
+        }
+        function findUser(identifier) { const users = getUsers(); return users.find(u => u.email === identifier || u.membershipId === identifier); }
+
+        function createSession(user, rememberMe) {
+            const session = {
+                user: { membershipId: user.membershipId, email: user.email, firstName: user.firstName, lastName: user.lastName, fullName: user.firstName + ' ' + user.lastName, phone: user.phone, role: 'member', joinedDate: user.joinedDate, yearOfCall: user.yearOfCall || '' },
+                token: 'jwt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                expires: Date.now() + (rememberMe ? CONFIG.SESSION_DURATION * 30 : CONFIG.SESSION_DURATION),
+                createdAt: Date.now()
+            };
+            const storage = rememberMe ? localStorage : sessionStorage;
+            storage.setItem('nba_session', JSON.stringify(session));
+            return session;
+        }
+        function getSession() { return null; /* sessions are validated by the server */ }
+        function clearSession() { localStorage.removeItem('nba_session'); sessionStorage.removeItem('nba_session'); }
+
+        function showAlert(containerId, type, title, message) {
+            const container = document.getElementById(containerId); if (!container) return;
+            const bgColor = type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-yellow-50 border-yellow-200 text-yellow-800';
+            const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-exclamation-triangle';
+            container.innerHTML = '<div class="' + bgColor + ' border rounded-lg p-4 flex items-start space-x-3 fade-in"><i class="fas ' + icon + ' mt-0.5"></i><div><h4 class="font-semibold text-sm">' + title + '</h4><p class="text-sm mt-1">' + message + '</p></div></div>';
+            container.classList.remove('hidden');
+        }
+        function hideAlert(containerId) { const container = document.getElementById(containerId); if (container) { container.classList.add('hidden'); container.innerHTML = ''; } }
+        function setLoading(buttonId, spinnerId, textId, loadingText, isLoading) {
+            const btn = document.getElementById(buttonId); const spinner = document.getElementById(spinnerId); const text = document.getElementById(textId);
+            if (btn) btn.disabled = isLoading; if (spinner) spinner.classList.toggle('hidden', !isLoading); if (text) text.textContent = isLoading ? loadingText : text.dataset.originalText || text.textContent;
+        }
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId); const icon = btn.querySelector('i');
+            if (input.type === 'password') { input.type = 'text'; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+            else { input.type = 'password'; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+        }
+        function switchView(viewName) {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('register-view').classList.add('hidden');
+            document.getElementById('forgot-view').classList.add('hidden');
+            const viewMap = { 'login': 'login-view', 'register': 'register-view', 'forgot': 'forgot-view' };
+            const viewId = viewMap[viewName];
+            if (viewId) { document.getElementById(viewId).classList.remove('hidden'); document.getElementById(viewId).classList.add('fade-in'); }
+            hideAlert('alert-container'); hideAlert('register-alert-container'); hideAlert('forgot-alert-container');
+        }
+
+        function initMobileMenu() {
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            if (!mobileMenuBtn || !mobileMenu) return;
+            mobileMenuBtn.addEventListener('click', function (e) {
+                e.stopPropagation(); mobileMenu.classList.toggle('hidden');
+                const isExpanded = !mobileMenu.classList.contains('hidden');
+                mobileMenuBtn.setAttribute('aria-expanded', isExpanded);
+                const icon = mobileMenuBtn.querySelector('i');
+                if (isExpanded) { icon.classList.remove('fa-bars'); icon.classList.add('fa-times'); }
+                else { icon.classList.remove('fa-times'); icon.classList.add('fa-bars'); }
+            });
+            document.addEventListener('click', function (e) {
+                if (!mobileMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+                    mobileMenu.classList.add('hidden'); mobileMenuBtn.setAttribute('aria-expanded', 'false');
+                    const icon = mobileMenuBtn.querySelector('i'); icon.classList.remove('fa-times'); icon.classList.add('fa-bars');
+                }
+            });
+            mobileMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => { mobileMenu.classList.add('hidden'); mobileMenuBtn.setAttribute('aria-expanded', 'false'); const icon = mobileMenuBtn.querySelector('i'); icon.classList.remove('fa-times'); icon.classList.add('fa-bars'); });
+            });
+        }
+
+        function initLogin() {
+            const form = document.getElementById('login-form');
+            const toggleBtn = document.getElementById('toggle-login-password');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    const input = document.getElementById('login-password'); const icon = document.getElementById('login-eye-icon');
+                    if (input.type === 'password') { input.type = 'text'; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+                    else { input.type = 'password'; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+                });
+            }
+            if (form) form.addEventListener('submit', handleLogin);
+            document.getElementById('forgot-password-link')?.addEventListener('click', () => switchView('forgot'));
+            document.getElementById('show-register-btn')?.addEventListener('click', () => switchView('register'));
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault(); hideAlert('alert-container');
+            const identifier = document.getElementById('login-identifier').value.trim();
+            const password = document.getElementById('login-password').value;
+            const rememberMe = document.getElementById('remember-me').checked;
+            if (!identifier) { showAlert('alert-container', 'error', 'Error', 'Please enter your email or Membership ID'); return; }
+            if (!password) { showAlert('alert-container', 'error', 'Error', 'Please enter your password'); return; }
+            setLoading('login-btn', 'login-btn-spinner', 'login-btn-text', 'Signing in...', true);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const user = findUser(identifier);
+            if (!user) { setLoading('login-btn', 'login-btn-spinner', 'login-btn-text', 'Sign In', false); showAlert('alert-container', 'error', 'Login Failed', 'No account found with this email or Membership ID. Please activate your membership first.'); return; }
+            if (user.password !== password) { setLoading('login-btn', 'login-btn-spinner', 'login-btn-text', 'Sign In', false); showAlert('alert-container', 'error', 'Login Failed', 'Incorrect password. Please try again or use Forgot Password.'); return; }
+            createSession(user, rememberMe);
+            setLoading('login-btn', 'login-btn-spinner', 'login-btn-text', 'Sign In', false);
+            showAlert('alert-container', 'success', 'Welcome Back!', 'Hello ' + user.firstName + ', redirecting to your dashboard...');
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
+        }
+
+        function initRegistration() {
+            const form = document.getElementById('register-form');
+            if (form) form.addEventListener('submit', handleRegistration);
+            document.getElementById('show-login-from-register')?.addEventListener('click', () => switchView('login'));
+        }
+
+        async function handleRegistration(e) {
+            e.preventDefault(); hideAlert('register-alert-container');
+            const firstName = document.getElementById('reg-firstname').value.trim();
+            const lastName = document.getElementById('reg-lastname').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const yearOfCall = document.getElementById('reg-year-of-call').value.trim();
+            const membershipId = document.getElementById('reg-membership-id').value.trim().toUpperCase();
+            const password = document.getElementById('reg-password').value;
+            const confirmPassword = document.getElementById('reg-confirm-password').value;
+
+            if (!firstName || !lastName) { showAlert('register-alert-container', 'error', 'Error', 'Please enter your full name'); return; }
+            if (!validateEmail(email)) { showAlert('register-alert-container', 'error', 'Error', 'Please enter a valid email address'); return; }
+            if (!phone || phone.length < 10) { showAlert('register-alert-container', 'error', 'Error', 'Please enter a valid phone number'); return; }
+            if (!yearOfCall || parseInt(yearOfCall) < 1900 || parseInt(yearOfCall) > new Date().getFullYear()) { showAlert('register-alert-container', 'error', 'Error', 'Please enter a valid Year of Call'); return; }
+            if (!validateMembershipId(membershipId)) { showAlert('register-alert-container', 'error', 'Error', 'Invalid Membership ID format. Use: SCN12345'); return; }
+            if (!validatePassword(password)) { showAlert('register-alert-container', 'error', 'Error', 'Password must be at least 8 characters with 1 uppercase, 1 number, and 1 special character'); return; }
+            if (password !== confirmPassword) { showAlert('register-alert-container', 'error', 'Error', 'Passwords do not match'); return; }
+
+            const existingUser = findUser(email) || findUser(membershipId);
+            if (existingUser) { showAlert('register-alert-container', 'error', 'Error', 'An account with this email or Membership ID already exists. Please login instead.'); return; }
+
+            setLoading('register-btn', 'register-btn-spinner', 'register-btn-text', 'Activating...', true);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            const newUser = {
+                membershipId: membershipId, email: email, firstName: firstName, lastName: lastName,
+                phone: phone, yearOfCall: yearOfCall, password: password,
+                joinedDate: new Date().toISOString(), status: 'active', role: 'member'
+            };
+            saveUser(newUser);
+
+            // Create member data for dashboard
+            const memberData = {
+                membershipId: membershipId, firstName: firstName, lastName: lastName,
+                email: email, phone: phone, yearOfCall: yearOfCall,
+                chamber: '', practiceArea: '', courtDivision: '', address: '', bio: '', photo: null,
+                rank: 'Barrister', status: 'Active', joinDate: new Date().toISOString().split('T')[0], role: 'member'
+            };
+            const allMembers = JSON.parse(localStorage.getItem('nba_member_data') || '{}');
+            allMembers[membershipId] = memberData;
+            localStorage.setItem('nba_member_data', JSON.stringify(allMembers));
+
+            setLoading('register-btn', 'register-btn-spinner', 'register-btn-text', 'Activate Account', false);
+            showAlert('register-alert-container', 'success', 'Success!', 'Your membership has been activated! Redirecting to login...');
+            setTimeout(() => { switchView('login'); document.getElementById('login-identifier').value = membershipId; hideAlert('register-alert-container'); }, 2000);
+        }
+
+        function initForgotPassword() {
+            document.getElementById('back-to-login')?.addEventListener('click', () => { resetForgotFlow(); switchView('login'); });
+            document.getElementById('forgot-form')?.addEventListener('submit', handleForgotSubmit);
+            document.getElementById('otp-form')?.addEventListener('submit', handleOTPSubmit);
+            document.getElementById('reset-form')?.addEventListener('submit', handleResetSubmit);
+            document.getElementById('resend-otp')?.addEventListener('click', handleResendOTP);
+            initOTPInputs();
+        }
+
+        async function handleForgotSubmit(e) {
+            e.preventDefault(); hideAlert('forgot-alert-container');
+            const identifier = document.getElementById('forgot-identifier').value.trim();
+            if (!identifier) { showAlert('forgot-alert-container', 'error', 'Error', 'Please enter your email or Membership ID'); return; }
+            setLoading('forgot-submit-btn', 'forgot-btn-spinner', 'forgot-btn-text', 'Sending...', true);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            const user = findUser(identifier);
+            if (!user) { setLoading('forgot-submit-btn', 'forgot-btn-spinner', 'forgot-btn-text', 'Send Verification Code', false); showAlert('forgot-alert-container', 'error', 'Not Found', 'No account found with this identifier. Please check and try again.'); return; }
+            resetIdentifier = identifier;
+            resetOTP = generateOTP();
+            otpExpiry = Date.now() + CONFIG.OTP_DURATION;
+            console.log('OTP for', identifier, ':', resetOTP);
+            setLoading('forgot-submit-btn', 'forgot-btn-spinner', 'forgot-btn-text', 'Send Verification Code', false);
+            showAlert('forgot-alert-container', 'success', 'Code Sent!', 'A verification code has been sent to your registered contact. (Demo OTP: ' + resetOTP + ')');
+            setTimeout(() => { document.getElementById('forgot-step-1').classList.add('hidden'); document.getElementById('forgot-step-2').classList.remove('hidden'); document.getElementById('forgot-step-2').classList.add('fade-in'); hideAlert('forgot-alert-container'); startOTPTimer(); document.querySelector('.otp-input[data-index="0"]')?.focus(); }, 2000);
+        }
+
+        function initOTPInputs() {
+            const inputs = document.querySelectorAll('.otp-input');
+            inputs.forEach((input, index) => {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key >= '0' && e.key <= '9') {
+                        input.value = '';
+                        setTimeout(() => { if (index < inputs.length - 1) inputs[index + 1].focus(); }, 10);
+                    } else if (e.key === 'Backspace') {
+                        setTimeout(() => { if (index > 0 && input.value === '') inputs[index - 1].focus(); }, 10);
+                    } else if (e.key === 'ArrowLeft' && index > 0) inputs[index - 1].focus();
+                    else if (e.key === 'ArrowRight' && index < inputs.length - 1) inputs[index + 1].focus();
+                });
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pasted = e.clipboardData.getData('text').slice(0, 6);
+                    pasted.split('').forEach((char, i) => { if (inputs[i] && /\d/.test(char)) inputs[i].value = char; });
+                    if (inputs[pasted.length]) inputs[pasted.length].focus();
+                });
+            });
+        }
+
+        function startOTPTimer() {
+            const timerEl = document.getElementById('otp-timer');
+            const resendBtn = document.getElementById('resend-otp');
+            resendBtn.disabled = true;
+            const interval = setInterval(() => {
+                const remaining = Math.ceil((otpExpiry - Date.now()) / 1000);
+                if (remaining <= 0) { clearInterval(interval); timerEl.textContent = 'Code expired'; resendBtn.disabled = false; resendBtn.textContent = 'Resend Code'; }
+                else { const mins = Math.floor(remaining / 60); const secs = remaining % 60; timerEl.textContent = 'Code expires in ' + mins + ':' + secs.toString().padStart(2, '0'); }
+            }, 1000);
+        }
+
+        async function handleOTPSubmit(e) {
+            e.preventDefault(); hideAlert('otp-alert-container');
+            const inputs = document.querySelectorAll('.otp-input');
+            const enteredOTP = Array.from(inputs).map(i => i.value).join('');
+            if (enteredOTP.length !== 6) { showAlert('otp-alert-container', 'error', 'Error', 'Please enter the complete 6-digit code'); return; }
+            if (Date.now() > otpExpiry) { showAlert('otp-alert-container', 'error', 'Expired', 'Code has expired. Please request a new one.'); return; }
+            if (enteredOTP !== resetOTP) { showAlert('otp-alert-container', 'error', 'Invalid Code', 'Incorrect verification code. Please try again.'); inputs.forEach(i => i.value = ''); inputs[0].focus(); return; }
+            document.getElementById('forgot-step-2').classList.add('hidden');
+            document.getElementById('forgot-step-3').classList.remove('hidden');
+            document.getElementById('forgot-step-3').classList.add('fade-in');
+        }
+
+        async function handleResetSubmit(e) {
+            e.preventDefault(); hideAlert('reset-alert-container');
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-new-password').value;
+            if (!validatePassword(newPassword)) { showAlert('reset-alert-container', 'error', 'Weak Password', 'Password must be at least 8 characters with 1 uppercase, 1 number, and 1 special character'); return; }
+            if (newPassword !== confirmPassword) { showAlert('reset-alert-container', 'error', 'Mismatch', 'Passwords do not match'); return; }
+            setLoading('reset-submit-btn', 'reset-btn-spinner', 'reset-btn-text', 'Updating...', true);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            const user = findUser(resetIdentifier);
+            if (user) { user.password = newPassword; user.passwordChangedAt = new Date().toISOString(); saveUser(user); }
+            setLoading('reset-submit-btn', 'reset-btn-spinner', 'reset-btn-text', 'Reset Password', false);
+            showAlert('reset-alert-container', 'success', 'Success!', 'Your password has been reset successfully. Redirecting to login...');
+            setTimeout(() => { resetForgotFlow(); switchView('login'); document.getElementById('login-identifier').value = resetIdentifier || ''; hideAlert('reset-alert-container'); }, 2000);
+        }
+
+        async function handleResendOTP() {
+            hideAlert('otp-alert-container');
+            if (!resetIdentifier) return;
+            resetOTP = generateOTP();
+            otpExpiry = Date.now() + CONFIG.OTP_DURATION;
+            console.log('New OTP for', resetIdentifier, ':', resetOTP);
+            showAlert('otp-alert-container', 'success', 'Code Resent!', 'New verification code sent. (Demo OTP: ' + resetOTP + ')');
+            startOTPTimer();
+            document.querySelectorAll('.otp-input').forEach(i => i.value = '');
+            document.querySelector('.otp-input[data-index="0"]')?.focus();
+        }
+
+        function resetForgotFlow() {
+            resetIdentifier = null; resetOTP = null; otpExpiry = null;
+            document.getElementById('forgot-step-1').classList.remove('hidden');
+            document.getElementById('forgot-step-2').classList.add('hidden');
+            document.getElementById('forgot-step-3').classList.add('hidden');
+            document.getElementById('forgot-identifier').value = '';
+            document.querySelectorAll('.otp-input').forEach(i => i.value = '');
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-new-password').value = '';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initMobileMenu(); initLogin(); initRegistration(); initForgotPassword();
+            const remembered = localStorage.getItem('nba_remembered_email');
+            if (remembered) { document.getElementById('login-identifier').value = remembered; document.getElementById('remember-me').checked = true; }
+            document.querySelectorAll('[id$="-btn-text"]').forEach(el => { el.dataset.originalText = el.textContent; });
+        });
+    </script>
+    <script src="member-auth.js"></script>
+</body>
+
+</html>

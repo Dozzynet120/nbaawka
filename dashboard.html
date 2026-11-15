@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Dashboard | NBA Awka Branch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        nba: {
+                            gold: '#D4AF37',
+                            darkgold: '#B8960C',
+                            navy: '#1B365D',
+                            darknavy: '#0F1F33',
+                            cream: '#F5F5DC',
+                            lightgray: '#F8F9FA'
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Playfair Display', 'serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: #1e293b;
+            padding: 24px;
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #38bdf8;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            margin: 6px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: #334155;
+            color: #f8fafc;
+        }
+
+        .nav-item i {
+            width: 24px;
+            margin-right: 12px;
+            font-size: 1rem;
+        }
+
+        .nav-section {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #334155;
+        }
+
+        .nav-section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            margin-bottom: 8px;
+            padding-left: 16px;
+        }
+
+        .main {
+            margin-left: 260px;
+            padding: 24px 32px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 50px;
+            background: #1e293b;
+            transition: background 0.3s;
+        }
+
+        .user:hover {
+            background: #334155;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 0.85rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid #334155;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card h3 {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .stat-card .change {
+            font-size: 0.8rem;
+            margin-top: 6px;
+        }
+
+        .change.paid {
+            color: #4ade80;
+        }
+
+        .change.pending {
+            color: #fbbf24;
+        }
+
+        .change.overdue {
+            color: #f87171;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #334155;
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2 i {
+            color: #38bdf8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover td {
+            background: rgba(51, 65, 85, 0.3);
+        }
+
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status.paid {
+            background: #064e3b;
+            color: #4ade80;
+        }
+
+        .status.pending {
+            background: #451a03;
+            color: #fbbf24;
+        }
+
+        .status.overdue {
+            background: #7f1d1d;
+            color: #f87171;
+        }
+
+        .status.partial {
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #38bdf8;
+            flex-shrink: 0;
+        }
+
+        .time {
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .btn {
+            background: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+
+        .btn:hover {
+            background: #7dd3fc;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .btn-success {
+            background: #059669;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #10b981;
+        }
+
+        .btn-warning {
+            background: #d97706;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #f59e0b;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .view-btn {
+            background: transparent;
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            padding: 4px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .view-btn:hover {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 850px;
+            max-height: 92vh;
+            overflow-y: auto;
+            padding: 32px;
+            position: relative;
+            border: 1px solid #334155;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 28px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: #334155;
+            color: #f8fafc;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 32px;
+        }
+
+        .profile-photo-section {
+            text-align: center;
+        }
+
+        .profile-photo {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: #334155;
+            margin: 0 auto 16px;
+            overflow: hidden;
+            border: 4px solid #38bdf8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-photo .initials {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #38bdf8;
+        }
+
+        .upload-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #334155;
+            color: #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all 0.3s;
+        }
+
+        .upload-btn:hover {
+            background: #475569;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 14px;
+            background: #38bdf8;
+            color: #0f172a;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+
+        .badge-gold {
+            background: #D4AF37;
+        }
+
+        .badge-green {
+            background: #4ade80;
+            color: #064e3b;
+        }
+
+        .dues-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .due-card {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #334155;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .due-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .due-card.paid {
+            border-color: #059669;
+        }
+
+        .due-card.paid::before {
+            content: 'PAID';
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #059669;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .due-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .due-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .due-icon.levy {
+            background: rgba(212, 175, 55, 0.15);
+            color: #D4AF37;
+        }
+
+        .due-icon.dues {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+        }
+
+        .due-icon.practising {
+            background: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+        }
+
+        .due-icon.donation {
+            background: rgba(248, 113, 113, 0.15);
+            color: #f87171;
+        }
+
+        .due-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .due-subtitle {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .due-amount {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 12px 0;
+        }
+
+        .due-amount .currency {
+            font-size: 1rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .due-details {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 16px;
+        }
+
+        .due-details li {
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .due-details li span:last-child {
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .payment-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .payment-row:last-child {
+            border-bottom: none;
+        }
+
+        .payment-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .payment-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .payment-icon.success {
+            background: rgba(5, 150, 105, 0.2);
+            color: #4ade80;
+        }
+
+        .payment-icon.pending {
+            background: rgba(217, 119, 6, 0.2);
+            color: #fbbf24;
+        }
+
+        .payment-meta {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1e293b;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 2000;
+            border: 1px solid #334155;
+            animation: slideInToast 0.3s ease;
+        }
+
+        .toast.show {
+            display: flex;
+        }
+
+        .toast.success {
+            border-color: #059669;
+        }
+
+        .toast.error {
+            border-color: #dc2626;
+        }
+
+        @keyframes slideInToast {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        .btn.loading .spinner {
+            display: inline-block;
+        }
+
+        .btn.loading .btn-text {
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 101;
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 16px;
+                padding-top: 60px;
+            }
+
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .dues-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .mini-table {
+            width: 100%;
+            font-size: 0.8rem;
+            margin: 10px 0;
+        }
+
+        .mini-table td {
+            padding: 6px 0;
+            border-bottom: 1px dashed #334155;
+        }
+
+        .mini-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .mini-table .total {
+            font-weight: 700;
+            color: #38bdf8;
+            border-top: 2px solid #334155;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .quick-action {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .quick-action:hover {
+            background: #334155;
+            transform: translateY(-2px);
+        }
+
+        .quick-action i {
+            font-size: 1.3rem;
+            color: #38bdf8;
+        }
+
+        .quick-action-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .quick-action-sub {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+    </style>
+    <base target="_blank">
+</head>
+
+<body>
+    <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Toggle Menu"><i
+            class="fas fa-bars"></i></button>
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="logo"><i class="fas fa-balance-scale"></i><span>NBAAWKA</span></div>
+        <nav>
+            <div class="nav-item active" onclick="showView('dashboard')"><i class="fas fa-th-large"></i>Dashboard</div>
+            <div class="nav-item" onclick="showView('dues')"><i class="fas fa-file-invoice-dollar"></i>My Dues &
+                Payments</div>
+            <div class="nav-item" onclick="showView('payments')"><i class="fas fa-receipt"></i>Payment History</div>
+            <div class="nav-item" onclick="showView('profile')"><i class="fas fa-user-circle"></i>My Profile</div>
+            <div class="nav-section">
+                <div class="nav-section-title">Account</div>
+                <div class="nav-item" onclick="openMyProfile()"><i class="fas fa-id-card"></i>Edit Profile</div>
+                <div class="nav-item" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</div>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <!-- DASHBOARD VIEW -->
+        <div id="dashboard-view" class="fade-in">
+            <header class="header">
+                <div>
+                    <h1>Welcome back, <span id="dash-firstname">Member</span></h1>
+                    <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 4px;">Membership ID: <span
+                            id="dash-membership-id">—</span> | <span id="dash-rank">Barrister</span></p>
+                </div>
+                <div class="user" onclick="openMyProfile()">
+                    <div style="text-align: right;">
+                        <div style="font-weight: 600; font-size: 0.9rem;" id="dash-user-name">Member</div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;" id="dash-status">Active</div>
+                    </div>
+                    <div class="avatar" id="dash-avatar">M</div>
+                </div>
+            </header>
+
+            <div class="quick-actions">
+                <div class="quick-action" onclick="showView('dues')"><i class="fas fa-credit-card"></i>
+                    <div>
+                        <div class="quick-action-text">Pay Dues</div>
+                        <div class="quick-action-sub">Bar Centre Levy & Branch Dues</div>
+                    </div>
+                </div>
+                <div class="quick-action" onclick="openMyProfile()"><i class="fas fa-user-edit"></i>
+                    <div>
+                        <div class="quick-action-text">Update Profile</div>
+                        <div class="quick-action-sub">Keep your details current</div>
+                    </div>
+                </div>
+                <div class="quick-action" onclick="window.open('donate.html','_blank')"><i
+                        class="fas fa-hand-holding-heart"></i>
+                    <div>
+                        <div class="quick-action-text">Make Donation</div>
+                        <div class="quick-action-sub">Support branch projects</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Total Dues Paid (2026)</h3>
+                    <div class="value" id="stat-total-paid">₦0</div>
+                    <div class="change paid" id="stat-paid-status">All caught up!</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Outstanding Balance</h3>
+                    <div class="value" id="stat-outstanding">₦0</div>
+                    <div class="change pending" id="stat-balance-status">Nothing due</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Next Due Date</h3>
+                    <div class="value" style="font-size: 1.1rem;" id="stat-next-due">—</div>
+                    <div class="change" id="stat-due-status">Annual renewal</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Membership Status</h3>
+                    <div class="value" style="font-size: 1.1rem; color: #4ade80;" id="stat-membership">Active</div>
+                    <div class="change paid">In good standing</div>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="card">
+                    <h2><i class="fas fa-file-invoice"></i> Current Dues Summary</h2>
+                    <div id="dues-summary-content"></div>
+                </div>
+                <div class="card">
+                    <h2><i class="fas fa-history"></i> Recent Activity</h2>
+                    <div id="recent-activity"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DUES VIEW -->
+        <div id="dues-view" class="hidden">
+            <header class="header">
+                <div>
+                    <h1>My Dues & Payments</h1>
+                    <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 4px;">Based on your Year of Call: <span
+                            id="dues-year-display">—</span></p>
+                </div>
+            </header>
+
+            <div class="card" style="margin-bottom: 24px;">
+                <h2><i class="fas fa-info-circle"></i> 2026 Fee Schedule</h2>
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 16px;">
+                    <div>
+                        <h4
+                            style="color: #D4AF37; font-size: 0.85rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Bar Practising Fee & Bar Centre Levy</h4>
+                        <table class="mini-table">
+                            <tr>
+                                <td>1 - 4 Years</td>
+                                <td>₦5,000 + ₦1,250</td>
+                            </tr>
+                            <tr>
+                                <td>5 - 9 Years</td>
+                                <td>₦10,000 + ₦2,500</td>
+                            </tr>
+                            <tr>
+                                <td>10 - 14 Years</td>
+                                <td>₦17,500 + ₦4,375</td>
+                            </tr>
+                            <tr>
+                                <td>15 Years & Above</td>
+                                <td>₦25,000 + ₦6,250</td>
+                            </tr>
+                            <tr>
+                                <td>SAN / Benchers</td>
+                                <td>₦50,000 + ₦12,500</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div>
+                        <h4
+                            style="color: #38bdf8; font-size: 0.85rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Branch Dues</h4>
+                        <table class="mini-table">
+                            <tr>
+                                <td>1 - 7 Years</td>
+                                <td>₦5,000</td>
+                            </tr>
+                            <tr>
+                                <td>8 - 13 Years</td>
+                                <td>₦10,000</td>
+                            </tr>
+                            <tr>
+                                <td>14 - 25 Years</td>
+                                <td>₦15,000</td>
+                            </tr>
+                            <tr>
+                                <td>25 Years & Above</td>
+                                <td>₦20,000</td>
+                            </tr>
+                            <tr>
+                                <td>SAN / Benchers</td>
+                                <td>₦50,000</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dues-grid" id="dues-cards"></div>
+
+            <div class="card" style="margin-top: 24px;">
+                <h2><i class="fas fa-receipt"></i> My Payment History</h2>
+                <div id="payment-history-list"></div>
+            </div>
+        </div>
+
+        <!-- PAYMENTS VIEW -->
+        <div id="payments-view" class="hidden">
+            <header class="header">
+                <h1>Payment History</h1>
+            </header>
+            <div class="card">
+                <div id="full-payment-history"></div>
+            </div>
+        </div>
+
+        <!-- PROFILE VIEW -->
+        <div id="profile-view" class="hidden">
+            <header class="header">
+                <h1>My Profile</h1>
+            </header>
+            <div class="card">
+                <div id="profile-display"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- PROFILE EDIT MODAL -->
+    <div id="profile-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Profile</h2><button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="profile-form" onsubmit="saveProfile(event)">
+                <div class="profile-grid">
+                    <div class="profile-photo-section">
+                        <div class="profile-photo" id="profile-photo">
+                            <span class="initials" id="profile-initials">M</span>
+                            <img src="" alt="Profile" id="profile-img" style="display: none;">
+                        </div>
+                        <label class="upload-btn" id="upload-btn"><i class="fas fa-camera"></i> Upload Photo<input
+                                type="file" id="fileInput" accept="image/*" onchange="handlePhotoUpload(event)"></label>
+                        <div style="margin-top: 16px;">
+                            <span class="badge" id="rank-badge">Barrister</span>
+                            <span class="badge badge-green" id="status-badge">Active</span>
+                        </div>
+                    </div>
+                    <div class="profile-details">
+                        <div class="form-row">
+                            <div class="form-group"><label>First Name</label><input type="text" id="firstName" required>
+                            </div>
+                            <div class="form-group"><label>Last Name</label><input type="text" id="lastName" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Membership ID (NBA)</label><input type="text"
+                                    id="membershipId" readonly style="opacity: 0.6;"></div>
+                            <div class="form-group"><label>Year of Call</label><input type="number" id="yearOfCall"
+                                    required placeholder="e.g., 2015"></div>
+                        </div>
+                        <div class="form-group"><label>Email Address</label><input type="email" id="email" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Phone Number</label><input type="tel" id="phone" required>
+                            </div>
+                            <div class="form-group"><label>Chamber/Firm Name</label><input type="text" id="chamber"
+                                    placeholder="e.g., Tunde Bakare & Associates"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Area of Practice</label>
+                                <select id="practiceArea">
+                                    <option value="">Select Specialization</option>
+                                    <option value="Corporate">Corporate Law</option>
+                                    <option value="Criminal">Criminal Law</option>
+                                    <option value="Civil">Civil Litigation</option>
+                                    <option value="Property">Property Law</option>
+                                    <option value="Family">Family Law</option>
+                                    <option value="Human Rights">Human Rights</option>
+                                    <option value="Energy">Energy & Resources</option>
+                                    <option value="Tax">Tax Law</option>
+                                    <option value="General">General Practice</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Court Division</label>
+                                <select id="courtDivision">
+                                    <option value="">Select Division</option>
+                                    <option value="High Court">High Court</option>
+                                    <option value="Court of Appeal">Court of Appeal</option>
+                                    <option value="Supreme Court">Supreme Court</option>
+                                    <option value="Magistrate">Magistrate Court</option>
+                                    <option value="Sharia">Sharia Court</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Office Address</label><textarea id="address" rows="2"
+                                placeholder="Chamber address..."></textarea></div>
+                        <div class="form-group"><label>Professional Bio</label><textarea id="bio" rows="3"
+                                placeholder="Brief professional summary..."></textarea></div>
+                        <div style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap;">
+                            <button type="submit" class="btn"><span class="spinner"></span><span class="btn-text"><i
+                                        class="fas fa-save"></i> Save Changes</span></button>
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PAYMENT MODAL -->
+    <div id="payment-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="payment-modal-title">Make Payment</h2><button class="close-btn"
+                    onclick="closePaymentModal()">&times;</button>
+            </div>
+            <div id="payment-modal-body"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"><i class="fas fa-check-circle" id="toast-icon"></i><span id="toast-message">Operation
+            successful</span></div>
+
+    <script>
+
+        // ============================================
+        // CONFIGURATION & DATA
+        // ============================================
+        const CONFIG = {
+            PAYSTACK_KEY: 'pk_test_a4b3115561fd37a1f029a3163a0a765291ec998a',
+            BRANCH_EMAIL: 'nbaawkabranch@gmail.com',
+            SESSION_DURATION: 24 * 60 * 60 * 1000
+        };
+
+        const FEE_DATA = {
+            practisingFee: { '1-4': 5000, '5-9': 10000, '10-14': 17500, '15+': 25000, 'san': 50000 },
+            barCentreLevy: { '1-4': 1250, '5-9': 2500, '10-14': 4375, '15+': 6250, 'san': 12500 },
+            branchDues: { '1-7': 5000, '8-13': 10000, '14-25': 15000, '25+': 20000, 'san': 50000 }
+        };
+
+        function getLevyCategory(yearOfCall) {
+            const y = parseInt(yearOfCall);
+            if (isNaN(y)) return null;
+            const years = new Date().getFullYear() - y;
+            if (years <= 4) return '1-4';
+            if (years <= 9) return '5-9';
+            if (years <= 14) return '10-14';
+            return '15+';
+        }
+
+        function getDuesCategory(yearOfCall) {
+            const y = parseInt(yearOfCall);
+            if (isNaN(y)) return null;
+            const years = new Date().getFullYear() - y;
+            if (years <= 7) return '1-7';
+            if (years <= 13) return '8-13';
+            if (years <= 25) return '14-25';
+            return '25+';
+        }
+
+        function getLevyLabel(cat) { const l = { '1-4': '1 - 4 Years', '5-9': '5 - 9 Years', '10-14': '10 - 14 Years', '15+': '15 Years & Above', 'san': 'SAN / Benchers' }; return l[cat] || cat; }
+        function getDuesLabel(cat) { const l = { '1-7': '1 - 7 Years', '8-13': '8 - 13 Years', '14-25': '14 - 25 Years', '25+': '25 Years & Above', 'san': 'SAN / Benchers' }; return l[cat] || cat; }
+
+        // ============================================
+        // STATE
+        // ============================================
+        let currentUser = null;
+        let memberData = null;
+        let tempPhoto = null;
+        let currentPaymentType = null;
+        let currentPaymentAmount = 0;
+
+        // ============================================
+        // STORAGE HELPERS
+        // ============================================
+        function getUsers() { return JSON.parse(localStorage.getItem('nba_users') || '[]'); }
+        function saveUser(user) {
+            const users = getUsers();
+            const idx = users.findIndex(u => u.membershipId === user.membershipId || u.email === user.email);
+            if (idx >= 0) users[idx] = { ...users[idx], ...user };
+            else users.push(user);
+            localStorage.setItem('nba_users', JSON.stringify(users));
+        }
+        function findUser(id) { const users = getUsers(); return users.find(u => u.email === id || u.membershipId === id); }
+        function getSession() { return window.nbaServerSession || null; }
+        async function clearSession() { try { await fetch((window.NBA_MEMBER_API || '/api') + '/auth/logout', {method:'POST',credentials:'include'}); } catch (_) {} }
+        function getMemberData(mid) { const all = JSON.parse(localStorage.getItem('nba_member_data') || '{}'); return all[mid] || null; }
+        function saveMemberData(mid, data) { const all = JSON.parse(localStorage.getItem('nba_member_data') || '{}'); all[mid] = { ...all[mid], ...data }; localStorage.setItem('nba_member_data', JSON.stringify(all)); }
+        function getPayments(mid) { const all = JSON.parse(localStorage.getItem('nba_payments') || '{}'); return all[mid] || []; }
+        function addPayment(mid, payment) { const all = JSON.parse(localStorage.getItem('nba_payments') || '{}'); if (!all[mid]) all[mid] = []; all[mid].unshift(payment); localStorage.setItem('nba_payments', JSON.stringify(all)); }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function init() {
+            try {
+            const response = await fetch((window.NBA_MEMBER_API || '/api') + '/auth/me', {credentials:'include'});
+            if (!response.ok) throw new Error('not signed in');
+            const result = await response.json();
+            window.nbaServerSession = {user:result.member};
+            const session = getSession();
+            if (!session) { window.location.href = 'membershiplogin.html'; return; }
+            currentUser = session.user;
+            memberData = getMemberData(currentUser.membershipId);
+            if (!memberData) {
+                memberData = {
+                    membershipId: currentUser.membershipId, firstName: currentUser.firstName, lastName: currentUser.lastName,
+                    email: currentUser.email, phone: currentUser.phone || '', yearOfCall: currentUser.yearOfCall || '',
+                    chamber: '', practiceArea: '', courtDivision: '', address: '', bio: '', photo: null,
+                    rank: 'Barrister', status: 'Active', joinDate: currentUser.joinedDate || new Date().toISOString().split('T')[0], role: currentUser.role || 'member'
+                };
+                saveMemberData(currentUser.membershipId, memberData);
+            }
+            const user = findUser(currentUser.membershipId) || findUser(currentUser.email);
+            if (user) { memberData = { ...memberData, ...user }; saveMemberData(currentUser.membershipId, memberData); }
+            renderDashboard(); renderDues(); renderPaymentHistory(); renderProfile();
+            } catch (_) { window.location.href = 'membershiplogin.html'; }
+        }
+        async function logout() { await clearSession(); window.location.href = 'membershiplogin.html'; }
+
+        // ============================================
+        // NAVIGATION
+        // ============================================
+        function showView(view) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            ['dashboard-view', 'dues-view', 'payments-view', 'profile-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById(view + '-view').classList.remove('hidden');
+            document.getElementById(view + '-view').classList.add('fade-in');
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('overlay').classList.remove('active');
+            if (view === 'dashboard') renderDashboard();
+            if (view === 'dues') renderDues();
+            if (view === 'payments') renderPaymentHistory();
+            if (view === 'profile') renderProfile();
+        }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
+
+        // ============================================
+        // DASHBOARD
+        // ============================================
+        function renderDashboard() {
+            if (!memberData) return;
+            document.getElementById('dash-firstname').textContent = memberData.firstName || 'Member';
+            document.getElementById('dash-membership-id').textContent = memberData.membershipId || '—';
+            document.getElementById('dash-rank').textContent = memberData.rank || 'Barrister';
+            document.getElementById('dash-user-name').textContent = (memberData.firstName || '') + ' ' + (memberData.lastName || '');
+            document.getElementById('dash-status').textContent = memberData.status || 'Active';
+            const avatar = document.getElementById('dash-avatar');
+            if (memberData.photo) { avatar.innerHTML = '<img src="' + memberData.photo + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'; }
+            else { avatar.textContent = (memberData.firstName?.[0] || 'M') + (memberData.lastName?.[0] || ''); }
+
+            const dues = calculateDues();
+            const payments = getPayments(memberData.membershipId);
+            const totalPaid = payments.filter(p => p.status === 'success').reduce((sum, p) => sum + p.amount, 0);
+            const totalDue = dues.barCentreLevy.total + dues.branchDues.total;
+            const outstanding = Math.max(0, totalDue - totalPaid);
+
+            document.getElementById('stat-total-paid').textContent = 'N' + totalPaid.toLocaleString();
+            const ps = document.getElementById('stat-paid-status');
+            if (outstanding === 0 && totalDue > 0) { ps.textContent = 'All dues paid!'; ps.className = 'change paid'; }
+            else if (outstanding > 0) { ps.textContent = 'N' + outstanding.toLocaleString() + ' outstanding'; ps.className = 'change overdue'; }
+            else { ps.textContent = 'No dues calculated yet'; ps.className = 'change pending'; }
+
+            const bs = document.getElementById('stat-balance-status');
+            if (outstanding > 0) { bs.textContent = 'Payment required'; bs.className = 'change overdue'; }
+            else if (totalDue > 0) { bs.textContent = 'Fully paid'; bs.className = 'change paid'; }
+            else { bs.textContent = 'Update Year of Call to see dues'; bs.className = 'change pending'; }
+
+            document.getElementById('stat-next-due').textContent = 'Dec 31, 2026';
+            document.getElementById('stat-membership').textContent = memberData.status || 'Active';
+
+            const dc = document.getElementById('dues-summary-content');
+            if (!memberData.yearOfCall) {
+                dc.innerHTML = '<div class="empty-state"><i class="fas fa-user-edit"></i><p>Please update your <strong>Year of Call</strong> in your profile to see your dues.</p><button class="btn" style="margin-top:16px;" onclick="openMyProfile()"><i class="fas fa-edit"></i> Update Profile</button></div>';
+            } else {
+                const levyCat = getLevyCategory(memberData.yearOfCall);
+                const duesCat = getDuesCategory(memberData.yearOfCall);
+                const levyPaid = payments.filter(p => p.type === 'bar_centre_levy' && p.status === 'success').reduce((s, p) => s + p.amount, 0);
+                const duesPaid = payments.filter(p => p.type === 'branch_dues' && p.status === 'success').reduce((s, p) => s + p.amount, 0);
+                dc.innerHTML = '<table><tr><th>Fee Type</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Action</th></tr>' +
+                    '<tr><td><strong>Bar Centre Levy</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getLevyLabel(levyCat) + '</span></td><td>N' + dues.barCentreLevy.total.toLocaleString() + '</td><td>N' + levyPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.barCentreLevy.total - levyPaid).toLocaleString() + '</td><td>' + (levyPaid >= dues.barCentreLevy.total && dues.barCentreLevy.total > 0 ? '<span class="status paid">Paid</span>' : '<button class="btn btn-sm btn-success" onclick="initiatePayment(\'bar_centre_levy\', ' + (dues.barCentreLevy.total - levyPaid) + ')"><i class="fas fa-credit-card"></i> Pay</button>') + '</td></tr>' +
+                    '<tr><td><strong>Branch Dues</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getDuesLabel(duesCat) + '</span></td><td>N' + dues.branchDues.total.toLocaleString() + '</td><td>N' + duesPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.branchDues.total - duesPaid).toLocaleString() + '</td><td>' + (duesPaid >= dues.branchDues.total && dues.branchDues.total > 0 ? '<span class="status paid">Paid</span>' : '<button class="btn btn-sm btn-success" onclick="initiatePayment(\'branch_dues\', ' + (dues.branchDues.total - duesPaid) + ')"><i class="fas fa-credit-card"></i> Pay</button>') + '</td></tr>' +
+                    '</table>';
+            }
+
+            const ac = document.getElementById('recent-activity');
+            if (payments.length === 0) {
+                ac.innerHTML = '<div class="empty-state" style="padding:20px;"><i class="fas fa-receipt"></i><p>No payments yet. Your payment history will appear here.</p></div>';
+            } else {
+                ac.innerHTML = payments.slice(0, 5).map(p => {
+                    const colors = { success: '#4ade80', pending: '#fbbf24', failed: '#f87171' };
+                    return '<div class="activity-item"><div class="dot" style="background:' + (colors[p.status] || '#38bdf8') + ';"></div><div style="flex:1;"><div style="font-weight:500;">' + formatPaymentType(p.type) + '</div><div style="color:#64748b;font-size:0.8rem;">N' + p.amount.toLocaleString() + ' &bull; ' + p.status + '</div></div><div class="time">' + timeAgo(p.date) + '</div></div>';
+                }).join('');
+            }
+        }
+
+        function calculateDues() {
+            if (!memberData || !memberData.yearOfCall) return { barCentreLevy: { total: 0, practisingFee: 0, levy: 0 }, branchDues: { total: 0 } };
+            const levyCat = getLevyCategory(memberData.yearOfCall);
+            const duesCat = getDuesCategory(memberData.yearOfCall);
+            const pf = FEE_DATA.practisingFee[levyCat] || 0;
+            const bl = FEE_DATA.barCentreLevy[levyCat] || 0;
+            const bd = FEE_DATA.branchDues[duesCat] || 0;
+            return { barCentreLevy: { total: pf + bl, practisingFee: pf, levy: bl, category: levyCat }, branchDues: { total: bd, category: duesCat } };
+        }
+
+        // ============================================
+        // DUES VIEW
+        // ============================================
+        function renderDues() {
+            if (!memberData) return;
+            document.getElementById('dues-year-display').textContent = memberData.yearOfCall ? (memberData.yearOfCall + ' (' + (new Date().getFullYear() - parseInt(memberData.yearOfCall)) + ' years)') : 'Not set';
+            const dues = calculateDues();
+            const payments = getPayments(memberData.membershipId);
+            const levyPaid = payments.filter(p => p.type === 'bar_centre_levy' && p.status === 'success').reduce((s, p) => s + p.amount, 0);
+            const duesPaid = payments.filter(p => p.type === 'branch_dues' && p.status === 'success').reduce((s, p) => s + p.amount, 0);
+            const container = document.getElementById('dues-cards');
+
+            if (!memberData.yearOfCall) {
+                container.innerHTML = '<div class="due-card" style="grid-column: 1 / -1; text-align: center;"><div class="empty-state"><i class="fas fa-user-edit" style="font-size: 3rem; color: #38bdf8;"></i><h3 style="margin: 16px 0 8px;">Year of Call Required</h3><p>Please update your Year of Call in your profile to calculate your dues.</p><button class="btn" style="margin-top: 20px;" onclick="openMyProfile()"><i class="fas fa-edit"></i> Update Profile</button></div></div>';
+                return;
+            }
+
+            const levyFullyPaid = levyPaid >= dues.barCentreLevy.total && dues.barCentreLevy.total > 0;
+            const duesFullyPaid = duesPaid >= dues.branchDues.total && dues.branchDues.total > 0;
+
+            container.innerHTML =
+                '<div class="due-card ' + (levyFullyPaid ? 'paid' : '') + '">' +
+                '<div class="due-card-header"><div class="due-icon levy"><i class="fas fa-file-invoice"></i></div><div><div class="due-title">Bar Centre Levy</div><div class="due-subtitle">' + getLevyLabel(dues.barCentreLevy.category) + '</div></div></div>' +
+                '<div class="due-amount"><span class="currency">N</span>' + dues.barCentreLevy.total.toLocaleString() + '</div>' +
+                '<div class="due-details">' +
+                '<li><span>Bar Practising Fee</span><span>N' + dues.barCentreLevy.practisingFee.toLocaleString() + '</span></li>' +
+                '<li><span>Bar Centre Levy</span><span>N' + dues.barCentreLevy.levy.toLocaleString() + '</span></li>' +
+                '<li style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 6px;"><span>Paid</span><span>N' + levyPaid.toLocaleString() + '</span></li>' +
+                '<li><span>Balance</span><span style="color:' + (levyFullyPaid ? '#4ade80' : '#fbbf24') + ';">N' + Math.max(0, dues.barCentreLevy.total - levyPaid).toLocaleString() + '</span></li>' +
+                '</div>' +
+                (levyFullyPaid ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> Fully Paid</div>' : '<button class="btn btn-success" style="width:100%;" onclick="initiatePayment(\'bar_centre_levy\', ' + (dues.barCentreLevy.total - levyPaid) + ')"><i class="fas fa-credit-card"></i> Pay N' + (dues.barCentreLevy.total - levyPaid).toLocaleString() + '</button>') +
+                '</div>' +
+                '<div class="due-card ' + (duesFullyPaid ? 'paid' : '') + '">' +
+                '<div class="due-card-header"><div class="due-icon dues"><i class="fas fa-building"></i></div><div><div class="due-title">Branch Dues</div><div class="due-subtitle">' + getDuesLabel(dues.branchDues.category) + '</div></div></div>' +
+                '<div class="due-amount"><span class="currency">N</span>' + dues.branchDues.total.toLocaleString() + '</div>' +
+                '<div class="due-details">' +
+                '<li><span>Annual Branch Dues</span><span>N' + dues.branchDues.total.toLocaleString() + '</span></li>' +
+                '<li style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 6px;"><span>Paid</span><span>N' + duesPaid.toLocaleString() + '</span></li>' +
+                '<li><span>Balance</span><span style="color:' + (duesFullyPaid ? '#4ade80' : '#fbbf24') + ';">N' + Math.max(0, dues.branchDues.total - duesPaid).toLocaleString() + '</span></li>' +
+                '</div>' +
+                (duesFullyPaid ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> Fully Paid</div>' : '<button class="btn btn-success" style="width:100%;" onclick="initiatePayment(\'branch_dues\', ' + (dues.branchDues.total - duesPaid) + ')"><i class="fas fa-credit-card"></i> Pay N' + (dues.branchDues.total - duesPaid).toLocaleString() + '</button>') +
+                '</div>' +
+                '<div class="due-card" style="border-color: #D4AF37;">' +
+                '<div class="due-card-header"><div class="due-icon" style="background: rgba(212,175,55,0.15); color: #D4AF37;"><i class="fas fa-wallet"></i></div><div><div class="due-title">Pay All Dues</div><div class="due-subtitle">Combined payment</div></div></div>' +
+                '<div class="due-amount" style="color: #D4AF37;"><span class="currency">N</span>' + (dues.barCentreLevy.total + dues.branchDues.total).toLocaleString() + '</div>' +
+                '<div class="due-details">' +
+                '<li><span>Bar Centre Levy</span><span>N' + dues.barCentreLevy.total.toLocaleString() + '</span></li>' +
+                '<li><span>Branch Dues</span><span>N' + dues.branchDues.total.toLocaleString() + '</span></li>' +
+                '<li style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 6px;"><span>Total Paid</span><span>N' + (levyPaid + duesPaid).toLocaleString() + '</span></li>' +
+                '<li><span>Total Balance</span><span style="color:#fbbf24;">N' + Math.max(0, (dues.barCentreLevy.total + dues.branchDues.total) - (levyPaid + duesPaid)).toLocaleString() + '</span></li>' +
+                '</div>' +
+                ((levyPaid + duesPaid) >= (dues.barCentreLevy.total + dues.branchDues.total) ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> All Dues Paid!</div>' : '<button class="btn" style="width:100%; background: linear-gradient(135deg, #D4AF37, #B8960C); color: #0f172a;" onclick="initiatePayment(\'combined\', ' + ((dues.barCentreLevy.total + dues.branchDues.total) - (levyPaid + duesPaid)) + ')"><i class="fas fa-credit-card"></i> Pay All N' + ((dues.barCentreLevy.total + dues.branchDues.total) - (levyPaid + duesPaid)).toLocaleString() + '</button>') +
+                '</div>';
+
+            renderPaymentHistoryList('payment-history-list', 5);
+        }
+
+        // ============================================
+        // PAYMENT HISTORY
+        // ============================================
+        function renderPaymentHistory() { renderPaymentHistoryList('full-payment-history', 50); }
+        function renderPaymentHistoryList(elementId, limit) {
+            const container = document.getElementById(elementId);
+            if (!container) return;
+            const payments = getPayments(memberData.membershipId);
+            const dp = payments.slice(0, limit);
+            if (dp.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-receipt"></i><p>No payment records found.</p><p style="font-size:0.85rem;margin-top:8px;">Payments you make will appear here automatically.</p></div>';
+                return;
+            }
+            container.innerHTML = '<table><tr><th>Date</th><th>Type</th><th>Reference</th><th>Amount</th><th>Status</th></tr>' + dp.map(p => '<tr><td>' + formatDate(p.date) + '</td><td>' + formatPaymentType(p.type) + '</td><td style="font-family:monospace;font-size:0.8rem;">' + (p.reference || '—') + '</td><td style="font-weight:600;">N' + p.amount.toLocaleString() + '</td><td><span class="status ' + p.status + '">' + p.status + '</span></td></tr>').join('') + '</table>' + (payments.length > limit ? '<p style="text-align:center;margin-top:16px;color:#64748b;font-size:0.85rem;">Showing ' + limit + ' of ' + payments.length + ' payments</p>' : '');
+        }
+
+        // ============================================
+        // PROFILE VIEW
+        // ============================================
+        function renderProfile() {
+            const container = document.getElementById('profile-display');
+            if (!memberData) return;
+            const dues = calculateDues();
+            const payments = getPayments(memberData.membershipId);
+            const totalPaid = payments.filter(p => p.status === 'success').reduce((s, p) => s + p.amount, 0);
+            container.innerHTML =
+                '<div style="display: grid; grid-template-columns: 280px 1fr; gap: 32px;">' +
+                '<div style="text-align: center;">' +
+                '<div style="width: 160px; height: 160px; border-radius: 50%; background: #334155; margin: 0 auto 16px; overflow: hidden; border: 4px solid #38bdf8; display: flex; align-items: center; justify-content: center;">' +
+                (memberData.photo ? '<img src="' + memberData.photo + '" style="width:100%;height:100%;object-fit:cover;">' : '<span style="font-size: 2.5rem; font-weight: 700; color: #38bdf8;">' + (memberData.firstName?.[0] || '') + (memberData.lastName?.[0] || '') + '</span>') +
+                '</div>' +
+                '<h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 4px;">' + memberData.firstName + ' ' + memberData.lastName + '</h3>' +
+                '<p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 12px;">' + memberData.membershipId + '</p>' +
+                '<span class="badge">' + (memberData.rank || 'Barrister') + '</span>' +
+                '<span class="badge badge-green">' + (memberData.status || 'Active') + '</span>' +
+                '<div style="margin-top: 20px;"><button class="btn" onclick="openMyProfile()" style="width: 100%;"><i class="fas fa-edit"></i> Edit Profile</button></div>' +
+                '</div>' +
+                '<div>' +
+                '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">' +
+                '<div style="background: #0f172a; padding: 16px; border-radius: 12px; border: 1px solid #334155;">' +
+                '<div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Total Paid (2026)</div>' +
+                '<div style="font-size: 1.5rem; font-weight: 700; color: #4ade80;">N' + totalPaid.toLocaleString() + '</div>' +
+                '</div>' +
+                '<div style="background: #0f172a; padding: 16px; border-radius: 12px; border: 1px solid #334155;">' +
+                '<div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Member Since</div>' +
+                '<div style="font-size: 1.1rem; font-weight: 600;">' + formatDate(memberData.joinDate) + '</div>' +
+                '</div>' +
+                '</div>' +
+                '<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: #38bdf8;"><i class="fas fa-user"></i> Personal Information</h3>' +
+                '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">' +
+                '<div><div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">Full Name</div><div style="font-weight: 500;">' + memberData.firstName + ' ' + memberData.lastName + '</div></div>' +
+                '<div><div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">Email</div><div style="font-weight: 500;">' + memberData.email + '</div></div>' +
+                '<div><div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">Phone</div><div style="font-weight: 500;">' + (memberData.phone || 'Not set') + '</div></div>' +
+                '<div><div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">Year of Call</div><div style="font-weight: 500;">' + (memberData.yearOfCall || 'Not set') + '</div></div>' +
+                '</div>' +
+                '<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: #38bdf8;"><i class="fas fa-briefcase"></i> Professional Information</h3>' +
+                '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">' +
+                '<div><div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">Chamber/Firm</div><div style="font-weight: 500;">' + (memberData.chamber || 'Not set') + '</div></div>' +
+                '<div><div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">Practice Area</div><div style="font-weight: 500;">' + (memberData.practiceArea || 'Not set') + '</div></div>' +
+                '<div><div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">Court Division</div><div style="font-weight: 500;">' + (memberData.courtDivision || 'Not set') + '</div></div>' +
+                '<div><div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">Membership ID</div><div style="font-weight: 500;">' + memberData.membershipId + '</div></div>' +
+                '</div>' +
+                (memberData.address ? '<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px; color: #38bdf8;"><i class="fas fa-map-marker-alt"></i> Office Address</h3><p style="color: #94a3b8; margin-bottom: 16px;">' + memberData.address + '</p>' : '') +
+                (memberData.bio ? '<h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px; color: #38bdf8;"><i class="fas fa-info-circle"></i> Bio</h3><p style="color: #94a3b8;">' + memberData.bio + '</p>' : '') +
+                '</div>' +
+                '</div>';
+        }
+
+        // ============================================
+        // PROFILE MODAL
+        // ============================================
+        function openMyProfile() {
+            if (!memberData) return;
+            document.getElementById('firstName').value = memberData.firstName || '';
+            document.getElementById('lastName').value = memberData.lastName || '';
+            document.getElementById('membershipId').value = memberData.membershipId || '';
+            document.getElementById('yearOfCall').value = memberData.yearOfCall || '';
+            document.getElementById('email').value = memberData.email || '';
+            document.getElementById('phone').value = memberData.phone || '';
+            document.getElementById('chamber').value = memberData.chamber || '';
+            document.getElementById('practiceArea').value = memberData.practiceArea || '';
+            document.getElementById('courtDivision').value = memberData.courtDivision || '';
+            document.getElementById('address').value = memberData.address || '';
+            document.getElementById('bio').value = memberData.bio || '';
+            document.getElementById('rank-badge').textContent = memberData.rank || 'Barrister';
+            document.getElementById('status-badge').textContent = memberData.status || 'Active';
+
+            const img = document.getElementById('profile-img');
+            const initials = document.getElementById('profile-initials');
+            if (memberData.photo) { img.src = memberData.photo; img.style.display = 'block'; initials.style.display = 'none'; }
+            else { img.style.display = 'none'; initials.style.display = 'block'; initials.textContent = (memberData.firstName?.[0] || 'M') + (memberData.lastName?.[0] || ''); }
+            tempPhoto = memberData.photo || null;
+            document.getElementById('profile-modal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('profile-modal').classList.remove('active'); tempPhoto = null; }
+        function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    tempPhoto = e.target.result;
+                    document.getElementById('profile-img').src = tempPhoto;
+                    document.getElementById('profile-img').style.display = 'block';
+                    document.getElementById('profile-initials').style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveProfile(e) {
+            e.preventDefault();
+            const data = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                yearOfCall: document.getElementById('yearOfCall').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                chamber: document.getElementById('chamber').value,
+                practiceArea: document.getElementById('practiceArea').value,
+                courtDivision: document.getElementById('courtDivision').value,
+                address: document.getElementById('address').value,
+                bio: document.getElementById('bio').value,
+                photo: tempPhoto
+            };
+            memberData = { ...memberData, ...data };
+            saveMemberData(memberData.membershipId, memberData);
+            // Also update user record
+            const user = findUser(memberData.membershipId) || findUser(memberData.email);
+            if (user) {
+                user.firstName = data.firstName; user.lastName = data.lastName; user.email = data.email;
+                user.phone = data.phone; user.yearOfCall = data.yearOfCall;
+                saveUser(user);
+            }
+            closeModal();
+            renderDashboard(); renderDues(); renderProfile();
+            showToast('Profile updated successfully!', 'success');
+        }
+
+        // ============================================
+        // PAYMENT SYSTEM
+        // ============================================
+        function initiatePayment(type, amount) {
+            if (!memberData || !memberData.yearOfCall) {
+                showToast('Please set your Year of Call first', 'error');
+                return;
+            }
+            currentPaymentType = type;
+            currentPaymentAmount = amount;
+
+            const titles = { 'bar_centre_levy': 'Pay Bar Centre Levy', 'branch_dues': 'Pay Branch Dues', 'combined': 'Pay All Dues' };
+            document.getElementById('payment-modal-title').textContent = titles[type] || 'Make Payment';
+
+            const body = document.getElementById('payment-modal-body');
+            body.innerHTML =
+                '<div style="margin-bottom: 20px;">' +
+                '<p style="color: #94a3b8; margin-bottom: 16px;">You are about to make a payment for <strong>' + formatPaymentType(type) + '</strong>.</p>' +
+                '<div style="background: #0f172a; padding: 20px; border-radius: 12px; border: 1px solid #334155; text-align: center; margin-bottom: 20px;">' +
+                '<div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Amount to Pay</div>' +
+                '<div style="font-size: 2.5rem; font-weight: 700; color: #38bdf8; margin: 8px 0;">N' + amount.toLocaleString() + '</div>' +
+                '<div style="font-size: 0.85rem; color: #64748b;">Membership ID: ' + memberData.membershipId + '</div>' +
+                '</div>' +
+                '<div style="display: flex; gap: 12px;">' +
+                '<button class="btn btn-success" style="flex: 1; padding: 14px;" onclick="processPaystackPayment()">' +
+                '<span class="spinner"></span><span class="btn-text"><i class="fas fa-credit-card"></i> Pay with Paystack</span>' +
+                '</button>' +
+                '<button class="btn btn-secondary" style="flex: 1; padding: 14px;" onclick="closePaymentModal()">Cancel</button>' +
+                '</div>' +
+                '<div style="margin-top: 16px; padding: 12px; background: rgba(212,175,55,0.1); border-radius: 8px; border: 1px solid rgba(212,175,55,0.2);">' +
+                '<p style="font-size: 0.8rem; color: #D4AF37; margin: 0;"><i class="fas fa-university"></i> <strong>Bank Transfer:</strong> Access Bank | 0699620549 | NBA Awka Branch</p>' +
+                '</div>' +
+                '</div>';
+            document.getElementById('payment-modal').classList.add('active');
+        }
+
+        function closePaymentModal() { document.getElementById('payment-modal').classList.remove('active'); }
+
+        function processPaystackPayment() {
+            if (!memberData || currentPaymentAmount <= 0) return;
+
+            const handler = PaystackPop.setup({
+                key: CONFIG.PAYSTACK_KEY,
+                email: memberData.email,
+                amount: currentPaymentAmount * 100,
+                currency: 'NGN',
+                ref: 'NBA_AWK_' + memberData.membershipId + '_' + Date.now(),
+                metadata: {
+                    custom_fields: [
+                        { display_name: "Payment Type", variable_name: "payment_type", value: currentPaymentType },
+                        { display_name: "Membership ID", variable_name: "membership_id", value: memberData.membershipId },
+                        { display_name: "Member Name", variable_name: "member_name", value: memberData.firstName + ' ' + memberData.lastName },
+                        { display_name: "Year of Call", variable_name: "year_of_call", value: memberData.yearOfCall }
+                    ]
+                },
+                callback: function (response) {
+                    closePaymentModal();
+                    const payment = {
+                        type: currentPaymentType,
+                        amount: currentPaymentAmount,
+                        reference: response.reference,
+                        status: 'success',
+                        date: new Date().toISOString(),
+                        method: 'Paystack'
+                    };
+                    addPayment(memberData.membershipId, payment);
+                    renderDashboard(); renderDues(); renderPaymentHistory();
+                    showToast('Payment successful! Reference: ' + response.reference, 'success');
+                },
+                onClose: function () {
+                    showToast('Payment window closed', 'error');
+                }
+            });
+            handler.openIframe();
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function formatPaymentType(type) {
+            const map = { 'bar_centre_levy': 'Bar Centre Levy', 'branch_dues': 'Branch Dues', 'combined': 'Combined Dues', 'donation': 'Donation', 'project': 'Project Sponsorship' };
+            return map[type] || type;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function timeAgo(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const now = new Date();
+            const diff = Math.floor((now - d) / 1000);
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+            if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+            if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+            return formatDate(dateStr);
+        }
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+            msg.textContent = message;
+            toast.className = 'toast show ' + type;
+            icon.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            setTimeout(() => { toast.classList.remove('show'); }, 4000);
+        }
+
+        // Close modals on outside click
+        document.getElementById('profile-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('profile-modal')) closeModal(); });
+        document.getElementById('payment-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('payment-modal')) closePaymentModal(); });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+    <script src="member-auth.js"></script>
+</body>
+
+</html>

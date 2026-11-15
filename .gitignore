@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.vercel/
+backend/node_modules/
+backend/.env
+backend/.env.*
+!backend/.env.example
+*.log
+img.zip
+vid.zip
+
