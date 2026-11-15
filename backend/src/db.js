@@ -1,3 +1,3 @@
 import pg from 'pg';
 const { Pool } = pg;
-export const pool = new Pool({ connectionString:process.env.DATABASE_URL, ssl:process.env.DATABASE_SSL==='true'?{rejectUnauthorized:true}:undefined, max:10, idleTimeoutMillis:30000 });
+export const pool = new Pool({ connectionString:process.env.DATABASE_URL, ssl:process.env.DATABASE_SSL==='true'?{rejectUnauthorized:true}:undefined, max:10, idleTimeoutMillis:30000, connectionTimeoutMillis:8000, query_timeout:10000 });
