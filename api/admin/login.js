@@ -2,7 +2,7 @@ import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { pool } from '../../../backend/src/db.js';
+import { pool } from '../../backend/src/db.js';
 
 const emailSchema = z.string().trim().email().max(254).transform((value) => value.toLowerCase());
 const limiter = rateLimit({
