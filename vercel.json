@@ -4,6 +4,9 @@
     "api/admin/bootstrap/complete.js": { "maxDuration": 30 },
     "api/admin/login.js": { "maxDuration": 30 },
     "api/admin/me.js": { "maxDuration": 30 },
+    "api/admin/members.js": { "maxDuration": 30 },
+    "api/admin/member-decision.js": { "maxDuration": 30 },
+    "api/admin/dues.js": { "maxDuration": 30 },
     "api/admin/invitations.js": { "maxDuration": 30 },
     "api/admin/invitations/accept.js": { "maxDuration": 30 }
   }
