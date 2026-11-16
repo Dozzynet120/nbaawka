@@ -1,0 +1,86 @@
+/* Shared safeguards for the static pages on small screens. */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+html {
+    overflow-x: clip;
+}
+
+body {
+    margin: 0;
+    overflow-x: hidden;
+}
+
+img,
+picture,
+video,
+iframe,
+svg,
+canvas {
+    max-width: 100%;
+}
+
+@media (max-width: 767px) {
+    .container {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    main,
+    section,
+    header,
+    footer,
+    nav,
+    .flex,
+    .grid {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .flex > *,
+    .grid > * {
+        min-width: 0;
+    }
+
+    .overflow-x-auto {
+        max-width: 100%;
+    }
+
+    h1.text-5xl,
+    h1.text-6xl,
+    h1.text-7xl {
+        font-size: clamp(2rem, 8vw, 3rem);
+        line-height: 1.15;
+    }
+
+    .bg-nba-darknavy .container {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.4rem 1rem;
+        text-align: center;
+    }
+
+    .bg-nba-darknavy .container > div:first-child {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.35rem 1rem;
+    }
+
+    .bg-nba-darknavy .container > div:last-child {
+        display: none;
+    }
+
+    nav img {
+        object-fit: contain;
+    }
+}
