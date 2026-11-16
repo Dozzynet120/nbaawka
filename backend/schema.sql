@@ -43,11 +43,12 @@ CREATE TABLE IF NOT EXISTS member_dues (
  id BIGSERIAL PRIMARY KEY,
  member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
  dues_year INTEGER NOT NULL CHECK(dues_year BETWEEN 2000 AND 2200),
+ dues_type TEXT NOT NULL DEFAULT 'branch_dues' CHECK(dues_type IN ('branch_dues','bar_centre_levy','practising_fee')),
  amount_ngn NUMERIC(14,2),
  status TEXT NOT NULL DEFAULT 'unpaid' CHECK(status IN ('unpaid','paid','waived')),
  payment_reference TEXT,
  verified_by TEXT,
  paid_at TIMESTAMPTZ,
  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
- UNIQUE(member_id,dues_year)
+ UNIQUE(member_id,dues_year,dues_type)
 );

@@ -19,7 +19,7 @@
 </head>
 <body>
   <section id="login-view" class="login-wrap">
-    <main class="login-card"><div class="brand-mark">NBA</div><div class="eyebrow">NBA Awka Branch</div><h1>Admin portal</h1><p>Sign in to manage member applications, annual dues, and website content.</p>
+  <main class="login-card"><div class="brand-mark">NBA</div><div class="eyebrow">NBA Awka Branch</div><h1>Admin portal</h1><p>Sign in to manage member applications, dues and levies, and website content.</p>
       <form id="login-form"><div class="field"><label for="login-email">Admin email</label><input id="login-email" type="email" autocomplete="username" required></div><div class="field"><label for="login-password">Password</label><input id="login-password" type="password" autocomplete="current-password" required></div><button class="btn btn-primary btn-block">Sign in securely</button></form>
       <details style="margin-top:18px"><summary class="fine" style="cursor:pointer">Initial admin setup</summary><p class="fine">Only the configured initial admin can request the one-time setup email.</p><form id="bootstrap-form"><div class="field"><label for="bootstrap-email">Initial admin email</label><input id="bootstrap-email" type="email" required></div><button class="btn btn-light">Email setup link</button></form></details>
       <p id="login-message" class="msg" role="status"></p>
@@ -32,7 +32,7 @@
       <div class="nav-label">Workspace</div><nav class="nav" id="side-nav">
         <button data-page="overview" class="active"><span class="nav-icon">⌂</span>Overview</button>
         <button data-page="applications"><span class="nav-icon">▤</span>Member applications</button>
-        <button data-page="dues"><span class="nav-icon">₦</span>Annual dues</button>
+        <button data-page="dues"><span class="nav-icon">₦</span>Dues &amp; levies</button>
         <button data-page="site"><span class="nav-icon">◈</span>Website management</button>
         <button data-page="admins"><span class="nav-icon">♙</span>Administrators</button>
       </nav>
@@ -40,7 +40,7 @@
     </aside>
     <main class="main">
       <header class="topbar"><div><div class="crumb">NBA Awka / Administration</div><div id="top-title" class="top-title">Overview</div></div><div class="top-actions"><span id="last-updated" class="fine"></span><div id="avatar" class="avatar">NA</div></div></header>
-      <nav class="mobile-nav" id="mobile-nav"><button data-page="overview" class="active">Overview</button><button data-page="applications">Applications</button><button data-page="dues">Dues</button><button data-page="site">Website</button><button data-page="admins">Admins</button></nav>
+      <nav class="mobile-nav" id="mobile-nav"><button data-page="overview" class="active">Overview</button><button data-page="applications">Applications</button><button data-page="dues">Dues &amp; levies</button><button data-page="site">Website</button><button data-page="admins">Admins</button></nav>
       <div class="content">
         <section class="page" id="page-overview">
           <div class="page-head"><div><div class="eyebrow">Control center</div><h1>Good day, <span id="greeting-name">Admin</span></h1><p>Here’s the current picture of your branch portal.</p></div><button class="btn btn-light" id="refresh-overview">↻ &nbsp;Refresh data</button></div>
@@ -62,8 +62,8 @@
           <div class="panel"><div class="panel-head"><div><h2>Application queue</h2><p>Applicants must verify their email. Approval by any one of the four admins is sufficient.</p></div><div class="filters"><select id="member-filter"><option value="pending">Pending</option><option value="active">Active</option><option value="disabled">Rejected / disabled</option><option value="all">All applications</option></select><button class="btn btn-light" id="refresh-members">Refresh</button></div></div><div id="members-container"></div></div>
         </section>
         <section class="page hidden" id="page-dues">
-          <div class="page-head"><div><div class="eyebrow">Finance</div><h1>Annual dues</h1><p>Record dues payments verified by the secretariat. Amounts are entered by an admin; none are assumed.</p></div><div class="filters"><label class="fine" for="dues-year">Year</label><select id="dues-year"></select><button class="btn btn-light" id="refresh-dues">Refresh</button></div></div>
-          <div class="panel"><div class="panel-head"><div><h2>Active members</h2><p>Payment references and verification records are shared across the four administrators.</p></div><div class="filters"><select id="dues-filter"><option value="all">All statuses</option><option value="unpaid">Unpaid / unrecorded</option><option value="paid">Paid</option><option value="waived">Waived</option></select><input id="dues-search" type="search" placeholder="Find member"></div></div><div id="dues-container" class="dues-list"></div></div>
+          <div class="page-head"><div><div class="eyebrow">Finance</div><h1>Dues &amp; levies</h1><p>Track each charge separately for the selected year. Record payments verified by the secretariat.</p></div><div class="filters"><label class="fine" for="dues-year">Year</label><select id="dues-year"></select><button class="btn btn-light" id="refresh-dues">Refresh</button></div></div>
+          <div class="panel"><div class="filters" id="dues-types" style="margin-bottom:18px"><button class="btn btn-primary due-type-button" data-dues-type="branch_dues">Annual Branch Dues</button><button class="btn btn-light due-type-button" data-dues-type="bar_centre_levy">Bar Centre Levy</button><button class="btn btn-light due-type-button" data-dues-type="practising_fee">Bar Practising Fee</button></div><div class="panel-head"><div><h2 id="dues-category-title">Annual Branch Dues</h2><p>Payment references and verification records are shared across the four administrators.</p></div><div class="filters"><select id="dues-filter"><option value="all">All statuses</option><option value="unpaid">Unpaid / unrecorded</option><option value="paid">Paid</option><option value="waived">Waived</option></select><input id="dues-search" type="search" placeholder="Find member"></div></div><div id="dues-container" class="dues-list"></div></div>
         </section>
         <section class="page hidden" id="page-site">
           <div class="page-head"><div><div class="eyebrow">Website</div><h1>Website management</h1><p>Open a tool using this shared sign-in. Admin-only tools will send you back here to sign in if needed.</p></div></div>
@@ -90,8 +90,9 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <script>
     const $ = (id) => document.getElementById(id);
-    const ui = { admin: null, members: [], dues: [], duesYear: new Date().getFullYear(), admins: [] };
-    const titles = { overview: 'Overview', applications: 'Member applications', dues: 'Annual dues', site: 'Website management', admins: 'Administrators' };
+    const ui = { admin: null, members: [], dues: [], duesYear: new Date().getFullYear(), duesType: 'branch_dues', admins: [] };
+    const duesTypeNames = { branch_dues: 'Annual Branch Dues', bar_centre_levy: 'Bar Centre Levy', practising_fee: 'Bar Practising Fee' };
+    const titles = { overview: 'Overview', applications: 'Member applications', dues: 'Dues & levies', site: 'Website management', admins: 'Administrators' };
     async function api(path, options = {}) {
       const response = await fetch(`/api/admin/${path}`, { credentials: 'include', ...options, headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
       const type = response.headers.get('content-type') || '';
@@ -121,8 +122,8 @@
     function escapeHtml(value = '') { return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]); }
     function statusBadge(status) { const safe = ['pending','active','disabled','paid','unpaid','waived','verified'].includes(status) ? status : 'pending'; return `<span class="badge badge-${safe}">${safe === 'disabled' ? 'rejected / disabled' : safe}</span>`; }
     function renderOverview() {
-      const pending = ui.members.filter(m => m.status === 'pending'); const active = ui.dues.length || ui.members.filter(m => m.status === 'active').length; const paid = ui.dues.filter(d => d.status === 'paid').length; const waived = ui.dues.filter(d => d.status === 'waived').length;
-      $('stat-pending').textContent = pending.length; $('stat-active').textContent = active; $('stat-year').textContent = ui.duesYear; $('stat-paid').textContent = `${paid}`; $('stat-paid-note').textContent = `${waived} waived · ${active ? Math.round((paid / active) * 100) : 0}% paid`; $('stat-unpaid').textContent = Math.max(0, active - paid - waived);
+      const pending = ui.members.filter(m => m.status === 'pending'); const active = new Set(ui.dues.map(d => d.member_id)).size || ui.members.filter(m => m.status === 'active').length; const paid = ui.dues.filter(d => d.status === 'paid').length; const waived = ui.dues.filter(d => d.status === 'waived').length; const total = ui.dues.length;
+      $('stat-pending').textContent = pending.length; $('stat-active').textContent = active; $('stat-year').textContent = ui.duesYear; $('stat-paid').textContent = `${paid}`; $('stat-paid-note').textContent = `${waived} waived · ${total ? Math.round((paid / total) * 100) : 0}% of dues categories paid`; $('stat-unpaid').textContent = Math.max(0, total - paid - waived);
       const box = $('overview-applications');
       if (!pending.length) { box.innerHTML = '<div class="empty"><b>You’re all caught up</b>No pending applications need review.</div>'; return; }
       box.innerHTML = `<div class="table-wrap"><table class="table"><thead><tr><th>Applicant</th><th>Membership ID</th><th>Submitted</th><th>Email</th><th></th></tr></thead><tbody>${pending.slice(0, 5).map(m => `<tr><td><span class="person">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</span><div class="sub">${escapeHtml(m.email)}</div></td><td>${escapeHtml(m.membership_id)}</td><td>${new Date(m.created_at).toLocaleDateString()}</td><td>${m.email_verified_at ? statusBadge('verified') : '<span class="badge badge-pending">verification pending</span>'}</td><td><button class="btn btn-light" data-review="${m.id}">Review</button></td></tr>`).join('')}</tbody></table></div>`;
@@ -135,10 +136,10 @@
       container.querySelectorAll('[data-decision]').forEach(button => button.addEventListener('click', async () => { const decision = button.dataset.decision; const label = decision === 'approved' ? 'approve this application' : 'reject this application'; if (!confirm(`Are you sure you want to ${label}?`)) return; button.disabled = true; try { const result = await api('member-decision', { method: 'POST', body: JSON.stringify({ memberId: button.dataset.id, decision }) }); toast(result.message); await loadMembers(); await loadDues(); } catch (error) { toast(error.message, true); button.disabled = false; } }));
     }
     function renderDues() {
-      const query = $('dues-search').value.toLowerCase(); const filter = $('dues-filter').value; const rows = ui.dues.filter(d => (`${d.first_name} ${d.middle_name || ''} ${d.last_name} ${d.email} ${d.membership_id}`).toLowerCase().includes(query) && (filter === 'all' || (d.status || 'unpaid') === filter));
+      const query = $('dues-search').value.toLowerCase(); const filter = $('dues-filter').value; const rows = ui.dues.filter(d => d.dues_type === ui.duesType && (`${d.first_name} ${d.middle_name || ''} ${d.last_name} ${d.email} ${d.membership_id}`).toLowerCase().includes(query) && (filter === 'all' || (d.status || 'unpaid') === filter));
       const container = $('dues-container'); if (!rows.length) { container.innerHTML = '<div class="empty"><b>No member records match</b>Change the search or status filter.</div>'; return; }
       container.innerHTML = rows.map(d => { const status = d.status || 'unpaid'; return `<form class="dues-row" data-dues-form="${d.member_id}"><div class="dues-person"><div class="person">${escapeHtml(d.first_name)} ${escapeHtml(d.last_name)}</div><div class="sub">${escapeHtml(d.membership_id)} · ${escapeHtml(d.email)}</div><div style="margin-top:7px">${statusBadge(status)}${d.verified_by ? `<span class="sub"> · verified by ${escapeHtml(d.verified_by)}</span>` : ''}</div></div><div><label class="fine">Amount (₦)</label><input name="amount" type="number" min="1" step="0.01" value="${d.amount_ngn ?? ''}" placeholder="Amount"></div><div class="reference"><label class="fine">Payment reference</label><input name="reference" type="text" maxlength="160" value="${escapeHtml(d.payment_reference || '')}" placeholder="Receipt / transfer ref"></div><div class="save-dues"><select name="status" aria-label="Dues status"><option value="unpaid" ${status === 'unpaid' ? 'selected' : ''}>Unpaid</option><option value="paid" ${status === 'paid' ? 'selected' : ''}>Paid</option><option value="waived" ${status === 'waived' ? 'selected' : ''}>Waived</option></select> <button class="btn btn-primary" style="padding:9px 12px">Save</button></div></form>`; }).join('');
-      container.querySelectorAll('[data-dues-form]').forEach(form => form.addEventListener('submit', async event => { event.preventDefault(); const data = new FormData(form); const button = form.querySelector('button'); button.disabled = true; try { const result = await api('dues', { method: 'POST', body: JSON.stringify({ memberId: form.dataset.duesForm, year: ui.duesYear, status: data.get('status'), amount: data.get('amount'), reference: data.get('reference') }) }); toast(result.message); await loadDues(); } catch (error) { toast(error.message, true); button.disabled = false; } }));
+      container.querySelectorAll('[data-dues-form]').forEach(form => form.addEventListener('submit', async event => { event.preventDefault(); const data = new FormData(form); const button = form.querySelector('button'); button.disabled = true; try { const result = await api('dues', { method: 'POST', body: JSON.stringify({ memberId: form.dataset.duesForm, year: ui.duesYear, duesType: ui.duesType, status: data.get('status'), amount: data.get('amount'), reference: data.get('reference') }) }); toast(result.message); await loadDues(); } catch (error) { toast(error.message, true); button.disabled = false; } }));
     }
     async function signOut() { try { await api('logout', { method: 'POST', body: '{}' }); } catch {} location.reload(); }
     document.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click', () => page(button.dataset.page)));
@@ -150,6 +151,7 @@
     $('member-filter').addEventListener('change', () => loadMembers().catch(error => toast(error.message, true)));
     $('dues-year').innerHTML = Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - i).map(year => `<option value="${year}">${year}</option>`).join('');
     $('dues-year').addEventListener('change', () => loadDues().catch(error => toast(error.message, true)));
+    document.querySelectorAll('[data-dues-type]').forEach(button => button.addEventListener('click', () => { ui.duesType = button.dataset.duesType; $('dues-category-title').textContent = duesTypeNames[ui.duesType]; document.querySelectorAll('[data-dues-type]').forEach(tab => { tab.classList.toggle('btn-primary', tab === button); tab.classList.toggle('btn-light', tab !== button); }); renderDues(); }));
     $('dues-filter').addEventListener('change', renderDues); $('dues-search').addEventListener('input', renderDues);
     $('refresh-members').addEventListener('click', () => loadMembers().catch(error => toast(error.message, true)));
     $('refresh-dues').addEventListener('click', () => loadDues().catch(error => toast(error.message, true)));
