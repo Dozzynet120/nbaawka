@@ -80,6 +80,7 @@
         .hidden { display: none !important; }
     </style>
     <link rel="stylesheet" href="/site-responsive.css">
+    <script src="/admin-auth-client.js"></script>
 </head>
 <body>
     <!-- Login Screen -->
@@ -245,17 +246,25 @@
         let deleteId = null;
         let tempImage = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            sessionStorage.removeItem('nba_admin');
+        document.addEventListener('DOMContentLoaded', async () => {
+            const admin = await NBAAdminAuth.current();
+            if (admin) {
+                currentUser = admin;
+                showDashboard();
+            }
         });
 
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
-            showToast('Admin sign-in requires a secure server and is unavailable on this static page.', 'error');
+            try {
+                currentUser = (await NBAAdminAuth.login(document.getElementById('login-email').value, document.getElementById('login-password').value)).admin;
+                showDashboard();
+                showToast(`Welcome, ${currentUser.email}`, 'success');
+            } catch (error) { showToast(error.message, 'error'); }
         }
 
-        function logout() {
-            sessionStorage.removeItem('nba_admin');
+        async function logout() {
+            await NBAAdminAuth.logout().catch(() => {});
             currentUser = null;
             document.getElementById('login-screen').classList.remove('hidden');
             document.getElementById('admin-screen').classList.add('hidden');

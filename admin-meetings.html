@@ -47,6 +47,8 @@
         .copy-tooltip.show { opacity: 1; }
     </style>
     <link rel="stylesheet" href="/site-responsive.css">
+    <script src="/admin-auth-client.js"></script>
+    <style>body:not(.nba-admin-authorized) { visibility: hidden; }</style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans">
 
@@ -274,15 +276,9 @@
         let meetings = JSON.parse(localStorage.getItem('nba_meetings')) || [];
         let currentFilter = 'all';
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const adminSession = sessionStorage.getItem('nba_admin_session') || localStorage.getItem('nba_session');
-            if (!adminSession) {
-                sessionStorage.setItem('nba_admin_session', JSON.stringify({
-                    email: 'admin@nbaawka.org.ng',
-                    role: 'admin',
-                    loginTime: new Date().toISOString()
-                }));
-            }
+        document.addEventListener('DOMContentLoaded', async function() {
+            const admin = await NBAAdminAuth.requirePage();
+            if (!admin) return;
             
             loadMeetings();
             updateStats();
@@ -569,10 +565,9 @@
             }, 3000);
         }
 
-        function logout() {
-            sessionStorage.removeItem('nba_admin_session');
-            localStorage.removeItem('nba_session');
-            window.location.href = 'index.html';
+        async function logout() {
+            await NBAAdminAuth.logout().catch(() => {});
+            window.location.href = 'admin-console.html';
         }
 
         document.addEventListener('click', function(e) {

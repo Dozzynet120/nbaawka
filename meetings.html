@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NBA Awka Virtual Chambers - Admin & Member Portal</title>
+    <script src="/admin-auth-client.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -481,14 +482,27 @@
 
         // ==================== AUTHENTICATION ====================
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const session = localStorage.getItem('nba_session');
             if (session) {
                 currentUser = JSON.parse(session);
-                initializeApp();
+                if (currentUser.type === 'admin') {
+                    const admin = await NBAAdminAuth.current();
+                    if (admin) {
+                        currentUser = { ...admin, type: 'admin' };
+                        initializeApp();
+                    } else {
+                        localStorage.removeItem('nba_session');
+                        currentUser = null;
+                        showLogin();
+                    }
+                } else initializeApp();
             } else {
-                document.getElementById('authCheck').classList.add('hidden');
-                document.getElementById('loginModal').classList.add('active');
+                const admin = await NBAAdminAuth.current();
+                if (admin) {
+                    currentUser = { ...admin, type: 'admin' };
+                    initializeApp();
+                } else showLogin();
             }
 
             const today = new Date().toISOString().split('T')[0];
@@ -496,15 +510,20 @@
             if (dateInput) dateInput.min = today;
         });
 
-        function login(type) {
+        function showLogin() {
+            document.getElementById('authCheck').classList.add('hidden');
+            document.getElementById('loginModal').classList.add('active');
+        }
+
+        async function login(type) {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
 
             if (type === 'admin') {
-                const admin = demoAdmins.find(a => a.email === email && a.password === password);
-                if (admin) {
+                try {
+                    const { admin } = await NBAAdminAuth.login(email, password);
                     currentUser = { ...admin, type: 'admin' };
-                }
+                } catch (error) { showToast(error.message, 'error'); return; }
             } else {
                 const member = demoMembers.find(m => m.email === email);
                 if (member && password) {
@@ -517,7 +536,7 @@
             }
 
             if (currentUser) {
-                localStorage.setItem('nba_session', JSON.stringify(currentUser));
+                if (currentUser.type !== 'admin') localStorage.setItem('nba_session', JSON.stringify(currentUser));
                 document.getElementById('loginModal').classList.remove('active');
                 initializeApp();
                 showToast(`Welcome, ${getDisplayName(currentUser)}!`, 'success');
@@ -542,7 +561,8 @@
             return 'Member';
         }
 
-        function logout() {
+        async function logout() {
+            if (currentUser?.type === 'admin') await NBAAdminAuth.logout().catch(() => {});
             localStorage.removeItem('nba_session');
             currentUser = null;
             // FIXED: Reload meetings.html instead of index.html

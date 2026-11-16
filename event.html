@@ -49,6 +49,7 @@
         .admin-badge.active { display: inline-flex; }
     </style>
     <link rel="stylesheet" href="/site-responsive.css">
+    <script src="/admin-auth-client.js"></script>
 </head>
 <body class="bg-white font-sans">
 
@@ -124,15 +125,17 @@
                     <i class="fas fa-lock text-nba-gold text-2xl"></i>
                 </div>
                 <h3 class="font-serif text-2xl font-bold text-nba-navy">Admin Access</h3>
-                <p class="text-gray-500 text-sm mt-2">Enter password to manage events</p>
+                <p class="text-gray-500 text-sm mt-2">Sign in with an authorized admin account to manage events.</p>
             </div>
             
             <form id="adminLoginForm" class="space-y-4" onsubmit="return handleAdminLogin(event)">
                 <div>
-                    <input type="password" id="adminPassword" placeholder="Enter admin password" 
+                    <input type="email" id="adminEmail" placeholder="Admin email" autocomplete="username"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nba-gold" required>
+                    <input type="password" id="adminPassword" placeholder="Password" autocomplete="current-password"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nba-gold"
                         required>
-                    <p class="text-xs text-gray-400 mt-1">Admin access requires a secure server and is unavailable in this static page.</p>
+                    <p class="text-xs text-gray-400 mt-1">Use one of the four authorized administrator accounts.</p>
                 </div>
                 <div id="loginError" class="text-red-500 text-sm text-center hidden"></div>
                 <div class="flex gap-3">
@@ -590,7 +593,6 @@
     <script>
         // ==================== ADMIN FUNCTIONALITY ====================
         
-        const ADMIN_PASSWORD = null; // Static-page admin access is disabled.
         let isAdminLoggedIn = false;
         let deleteMode = false;
         let eventToDelete = null;
@@ -713,33 +715,35 @@
         }
 
         // Handle admin login
-        function handleAdminLogin(e) {
+        async function handleAdminLogin(e) {
             e.preventDefault();
-            const password = document.getElementById('adminPassword').value;
             const errorDiv = document.getElementById('loginError');
-            
-            if (password === ADMIN_PASSWORD) {
-                isAdminLoggedIn = true;
-                localStorage.setItem('nbaAdminLoggedIn', 'true');
-                localStorage.setItem('nbaAdminLoginTime', new Date().toISOString());
-                
+            try {
+                const result = await NBAAdminAuth.login(document.getElementById('adminEmail').value, document.getElementById('adminPassword').value);
+                setAdminSession(result.admin);
                 document.getElementById('adminLoginModal').classList.remove('active');
-                document.getElementById('adminPanel').classList.add('active');
-                document.getElementById('adminBadge').classList.add('active');
-                document.getElementById('adminBtn').innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i> Logout';
-                document.getElementById('adminBtn').classList.remove('bg-nba-gold', 'text-nba-navy');
-                document.getElementById('adminBtn').classList.add('bg-red-500', 'text-white');
-                
                 document.getElementById('adminPassword').value = '';
                 errorDiv.classList.add('hidden');
-                
-                renderEvents(); // Re-render to show edit/delete buttons
-                showNotification('Admin access granted!', 'success');
-            } else {
-                errorDiv.textContent = 'Invalid password. Please try again.';
+                showNotification(`Admin access granted for ${result.admin.email}.`, 'success');
+            } catch (error) {
+                errorDiv.textContent = error.message;
                 errorDiv.classList.remove('hidden');
             }
             return false;
+        }
+
+        function setAdminSession(admin) {
+            isAdminLoggedIn = Boolean(admin);
+            document.getElementById('adminPanel').classList.toggle('active', isAdminLoggedIn);
+            document.getElementById('adminBadge').classList.toggle('active', isAdminLoggedIn);
+            document.getElementById('adminBtn').innerHTML = isAdminLoggedIn
+                ? '<i class="fas fa-sign-out-alt mr-2"></i> Logout'
+                : '<i class="fas fa-lock mr-2"></i> Admin';
+            document.getElementById('adminBtn').classList.toggle('bg-red-500', isAdminLoggedIn);
+            document.getElementById('adminBtn').classList.toggle('text-white', isAdminLoggedIn);
+            document.getElementById('adminBtn').classList.toggle('bg-nba-gold', !isAdminLoggedIn);
+            document.getElementById('adminBtn').classList.toggle('text-nba-navy', !isAdminLoggedIn);
+            renderEvents();
         }
 
         // Close admin login modal
@@ -750,11 +754,10 @@
         }
 
         // Logout admin
-        function logoutAdmin() {
+        async function logoutAdmin() {
+            await NBAAdminAuth.logout().catch(() => {});
             isAdminLoggedIn = false;
             deleteMode = false;
-            localStorage.removeItem('nbaAdminLoggedIn');
-            localStorage.removeItem('nbaAdminLoginTime');
             
             document.getElementById('adminPanel').classList.remove('active');
             document.getElementById('adminBadge').classList.remove('active');
@@ -768,26 +771,9 @@
         }
 
         // Check if admin is already logged in (session check)
-        function checkAdminSession() {
-            const loggedIn = localStorage.getItem('nbaAdminLoggedIn');
-            const loginTime = localStorage.getItem('nbaAdminLoginTime');
-            
-            if (loggedIn === 'true' && loginTime) {
-                const thirtyMinutes = 30 * 60 * 1000;
-                if (new Date() - new Date(loginTime) < thirtyMinutes) {
-                    // Auto-login
-                    isAdminLoggedIn = true;
-                    document.getElementById('adminPanel').classList.add('active');
-                    document.getElementById('adminBadge').classList.add('active');
-                    document.getElementById('adminBtn').innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i> Logout';
-                    document.getElementById('adminBtn').classList.remove('bg-nba-gold', 'text-nba-navy');
-                    document.getElementById('adminBtn').classList.add('bg-red-500', 'text-white');
-                } else {
-                    // Session expired
-                    localStorage.removeItem('nbaAdminLoggedIn');
-                    localStorage.removeItem('nbaAdminLoginTime');
-                }
-            }
+        async function checkAdminSession() {
+            const admin = await NBAAdminAuth.current();
+            if (admin) setAdminSession(admin);
         }
 
         // Open event form modal (Add or Edit)

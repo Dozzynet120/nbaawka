@@ -1669,6 +1669,7 @@
     <base target="_blank">
     <base target="_blank">
     <link rel="stylesheet" href="/site-responsive.css">
+    <script src="/admin-auth-client.js"></script>
 </head>
 
 <body>
@@ -2167,8 +2168,8 @@
                     <p style="font-size:0.85rem;color:var(--gray-500);">Enter your credentials to manage records</p>
                 </div>
                 <div class="form-group" style="margin-bottom:16px;">
-                    <label>Username</label>
-                    <input type="text" id="adminUsername" placeholder="Enter username" value="admin">
+                    <label>Admin email</label>
+                    <input type="email" id="adminUsername" placeholder="Admin email" autocomplete="username">
                 </div>
                 <div class="form-group" style="margin-bottom:8px;">
                     <label>Password</label>
@@ -3196,14 +3197,20 @@
         // ============================================
         // ADMIN FUNCTIONS
         // ============================================
-        // Static-page admin credentials are intentionally disabled. Admin access
-        // must be implemented and checked by a trusted server.
-        const ADMIN_CREDENTIALS = { username: null, password: null };
         let isAdminLoggedIn = false;
         let adminCurrentPage = 1;
         let adminEditTargetId = null;
 
-        function openAdminLogin() {
+        async function openAdminLogin() {
+            const existingAdmin = await NBAAdminAuth.current();
+            if (existingAdmin) {
+                isAdminLoggedIn = true;
+                switchSection('admin');
+                document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+                document.getElementById('adminTabBtn').classList.add('active');
+                renderAdminRecords();
+                return;
+            }
             if (isAdminLoggedIn) {
                 switchSection('admin');
                 document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
@@ -3218,11 +3225,12 @@
             setTimeout(() => document.getElementById('adminPassword').focus(), 300);
         }
 
-        function adminLogin() {
-            const username = document.getElementById('adminUsername').value.trim();
+        async function adminLogin() {
+            const email = document.getElementById('adminUsername').value.trim();
             const password = document.getElementById('adminPassword').value;
 
-            if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+            try {
+                await NBAAdminAuth.login(email, password);
                 isAdminLoggedIn = true;
                 closeModal('adminLoginModal');
                 switchSection('admin');
@@ -3231,8 +3239,9 @@
                 populateAdminYearFilter();
                 renderAdminRecords();
                 showToast('Welcome', 'Logged in as Administrator', 'success');
-            } else {
+            } catch (error) {
                 document.getElementById('adminLoginError').style.display = 'block';
+                document.getElementById('adminLoginError').textContent = error.message;
                 document.getElementById('adminPassword').value = '';
                 document.getElementById('adminPassword').focus();
             }
@@ -3243,7 +3252,8 @@
             if (e.key === 'Enter') adminLogin();
         });
 
-        function adminLogout() {
+        async function adminLogout() {
+            await NBAAdminAuth.logout().catch(() => {});
             isAdminLoggedIn = false;
             adminCurrentPage = 1;
             adminEditTargetId = null;

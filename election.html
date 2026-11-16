@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/admin-auth-client.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
 
@@ -307,10 +308,10 @@
 
                 <form id="admin-setup-form" onsubmit="handleAdminRegistration(event)" class="space-y-6">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Admin ID</label>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Admin email</label>
                         <div class="relative">
                             <i class="fas fa-user-shield absolute left-3 top-3 text-slate-500"></i>
-                            <input type="text" id="new-admin-id" required 
+                            <input type="email" id="new-admin-id" required
                                 class="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                                 placeholder="Choose admin ID">
                         </div>
@@ -373,12 +374,12 @@
 
                 <form id="admin-login-form" onsubmit="handleAdminLogin(event)" class="space-y-6">
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Admin ID</label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Admin email</label>
                         <div class="relative">
                             <i class="fas fa-user-shield absolute left-3 top-3 text-slate-500"></i>
-                            <input type="text" id="admin-id" required 
+                            <input type="email" id="admin-id" required autocomplete="username"
                                 class="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                                placeholder="Enter admin ID">
+                                placeholder="Enter admin email">
                         </div>
                     </div>
 
@@ -402,9 +403,7 @@
                     <button onclick="showSection('hero-section')" class="text-slate-400 hover:text-white transition block w-full">
                         <i class="fas fa-arrow-left mr-1"></i> Back to Home
                     </button>
-                    <button onclick="showSection('admin-setup-section')" class="text-indigo-400 hover:text-indigo-300 transition text-sm">
-                        Register as New Admin (if slots available)
-                    </button>
+                    <a href="admin-console.html" class="text-indigo-400 hover:text-indigo-300 transition text-sm">Admin invitations are managed in the secure admin portal</a>
                 </div>
             </div>
         </section>
@@ -426,9 +425,7 @@
                             <div class="w-2 h-2 bg-green-500 rounded-full live-indicator"></div>
                             <span class="text-sm text-slate-300">System Active</span>
                         </div>
-                        <button onclick="showSection('admin-manage-section')" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm">
-                            <i class="fas fa-users-cog mr-2"></i>Manage Admins
-                        </button>
+                        <a href="admin-console.html" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"><i class="fas fa-users-cog mr-2"></i>Manage Admin Accounts</a>
                         <button onclick="exportResults()" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition text-sm">
                             <i class="fas fa-download mr-2"></i>Export
                         </button>
@@ -660,13 +657,13 @@
 
         // Initialize from localStorage if available
         function initFromStorage() {
-            const savedAdmins = localStorage.getItem('electvote_admins');
             const savedPositions = localStorage.getItem('electvote_positions');
             const savedVoters = localStorage.getItem('electvote_voters');
             const savedVotes = localStorage.getItem('electvote_votes');
             const savedVoteLog = localStorage.getItem('electvote_votelog');
 
-            if (savedAdmins) state.admins = JSON.parse(savedAdmins);
+            state.admins = [];
+            localStorage.removeItem('electvote_admins');
             if (savedPositions) state.positions = JSON.parse(savedPositions);
             if (savedVoters) {
                 state.voters = JSON.parse(savedVoters);
@@ -693,7 +690,7 @@
 
         // Save to localStorage
         function saveToStorage() {
-            localStorage.setItem('electvote_admins', JSON.stringify(state.admins));
+            localStorage.removeItem('electvote_admins');
             localStorage.setItem('electvote_positions', JSON.stringify(state.positions));
             localStorage.setItem('electvote_voters', JSON.stringify(state.voters));
             localStorage.setItem('electvote_votes', JSON.stringify(state.votes));
@@ -748,7 +745,7 @@
                 userInfo.classList.remove('hidden');
                 userInfo.classList.add('flex');
                 navAuth.classList.add('hidden');
-                document.getElementById('username-display').textContent = state.currentAdmin.name;
+                document.getElementById('username-display').textContent = state.currentAdmin.email;
             } else {
                 userInfo.classList.add('hidden');
                 userInfo.classList.remove('flex');
@@ -757,10 +754,13 @@
         }
 
         // Admin Access Handler
-        function handleAdminAccess() {
-            if (state.admins.length === 0) {
-                // No admins registered yet - redirect to setup
-                showSection('admin-setup-section');
+        async function handleAdminAccess() {
+            const admin = await NBAAdminAuth.current();
+            if (admin) {
+                state.isAdmin = true;
+                state.currentAdmin = admin;
+                state.currentUser = null;
+                showSection('admin-dashboard-section');
             } else {
                 showSection('admin-login-section');
             }
@@ -787,58 +787,22 @@
 
         function handleAdminRegistration(e) {
             e.preventDefault();
-            
-            if (state.admins.length >= 4) {
-                showToast('Admin limit reached (4 maximum)', 'error');
-                return;
-            }
-
-            const id = document.getElementById('new-admin-id').value.trim();
-            const name = document.getElementById('new-admin-name').value.trim();
-            const password = document.getElementById('new-admin-password').value;
-            const confirm = document.getElementById('new-admin-confirm').value;
-
-            // Validation
-            if (state.admins.find(a => a.id === id)) {
-                showToast('Admin ID already exists', 'error');
-                return;
-            }
-
-            if (password !== confirm) {
-                showToast('Passwords do not match', 'error');
-                return;
-            }
-
-            if (password.length < 6) {
-                showToast('Password must be at least 6 characters', 'error');
-                return;
-            }
-
-            // Add admin
-            state.admins.push({ id, name, password });
-            saveToStorage();
-
-            showToast(`Admin ${name} registered successfully!`);
-            showSection('admin-login-section');
+            showToast('Administrator accounts are issued only by the owner through the secure admin portal.', 'error');
         }
 
         // Admin Login
-        function handleAdminLogin(e) {
+        async function handleAdminLogin(e) {
             e.preventDefault();
-            const id = document.getElementById('admin-id').value;
+            const email = document.getElementById('admin-id').value;
             const password = document.getElementById('admin-password').value;
-
-            const admin = state.admins.find(a => a.id === id && a.password === password);
-
-            if (admin) {
+            try {
+                const { admin } = await NBAAdminAuth.login(email, password);
                 state.isAdmin = true;
                 state.currentAdmin = admin;
                 state.currentUser = null;
-                showToast(`Welcome, ${admin.name}!`);
+                showToast(`Welcome, ${admin.email}!`);
                 showSection('admin-dashboard-section');
-            } else {
-                showToast('Invalid admin credentials', 'error');
-            }
+            } catch (error) { showToast(error.message, 'error'); }
         }
 
         // Admin Management
@@ -847,7 +811,7 @@
             const countEl = document.getElementById('current-admin-count');
             
             countEl.textContent = state.admins.length;
-            container.innerHTML = '';
+            container.innerHTML = '<p class="text-slate-600">Administrator accounts are managed in the secure admin portal.</p><a href="admin-console.html" class="text-indigo-600 underline">Open admin portal</a>';
 
             state.admins.forEach((admin, index) => {
                 const div = document.createElement('div');
@@ -1077,7 +1041,8 @@
             }
         }
 
-        function logout() {
+        async function logout() {
+            if (state.isAdmin) await NBAAdminAuth.logout().catch(() => {});
             state.currentUser = null;
             state.currentAdmin = null;
             state.isAdmin = false;
@@ -1525,10 +1490,17 @@
         }, 8000);
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             initFromStorage();
             initDemoData();
             updateHeroStats();
+            const admin = await NBAAdminAuth.current();
+            if (admin) {
+                state.isAdmin = true;
+                state.currentAdmin = admin;
+                showSection('admin-dashboard-section');
+                updateNavVisibility();
+            }
         });
     </script>
 </body>

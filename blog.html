@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/admin-auth-client.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -757,51 +758,21 @@
         }
 
         // Initialize - check if first time setup needed
-        function initAuth() {
-            if (!checkAdminExists()) {
-                document.getElementById('setup-modal').classList.remove('hidden');
+        async function initAuth() {
+            const admin = await NBAAdminAuth.current();
+            if (admin) {
+                isAdminLoggedIn = true;
+                document.getElementById('admin-email').textContent = admin.email;
+                showAdminPanel();
             }
         }
 
         // Create initial admin
         async function createInitialAdmin(e) {
             e.preventDefault();
-            const email = document.getElementById('setup-email').value;
-            const password = document.getElementById('setup-password').value;
-            const confirm = document.getElementById('setup-confirm').value;
             const errorEl = document.getElementById('setup-error');
-            const btnText = document.getElementById('setup-btn-text');
-            const spinner = document.getElementById('setup-spinner');
-            
-            // Validation
-            if (password !== confirm) {
-                errorEl.textContent = 'Passwords do not match';
-                errorEl.classList.remove('hidden');
-                return;
-            }
-            
-            if (!validatePasswordStrength(password)) {
-                errorEl.textContent = 'Password does not meet all requirements';
-                errorEl.classList.remove('hidden');
-                return;
-            }
-            
-            btnText.textContent = 'Creating...';
-            spinner.classList.remove('hidden');
-            
-            try {
-                await storeAdminUser(email, password);
-                document.getElementById('setup-modal').classList.add('hidden');
-                showToast('Admin account created successfully! Please login.', 'success');
-                document.getElementById('admin-login-email').value = email;
-                openAdminLogin();
-            } catch (error) {
-                errorEl.textContent = 'Error creating account. Please try again.';
-                errorEl.classList.remove('hidden');
-            } finally {
-                btnText.textContent = 'Create Account';
-                spinner.classList.add('hidden');
-            }
+            errorEl.textContent = 'Admin accounts are created through the secure admin portal. Ask the owner to send you an invitation.';
+            errorEl.classList.remove('hidden');
         }
 
         // UPDATED Login Handler
@@ -814,75 +785,19 @@
             const btnText = document.getElementById('login-btn-text');
             const spinner = document.getElementById('login-spinner');
             
-            // Check if setup needed
-            if (!checkAdminExists()) {
-                errorEl.textContent = 'No admin account found. Please set up first.';
-                errorEl.classList.remove('hidden');
-                setTimeout(() => {
-                    closeAdminLogin();
-                    initAuth();
-                }, 1500);
-                return;
-            }
-            
-            const admin = getStoredAdmin();
-            
-            // Check lockout
-            if (admin.lockedUntil && new Date(admin.lockedUntil) > new Date()) {
-                const mins = Math.ceil((new Date(admin.lockedUntil) - new Date()) / 60000);
-                errorEl.textContent = `Account locked. Try again in ${mins} minutes.`;
-                errorEl.classList.remove('hidden');
-                return;
-            }
-            
             btnText.textContent = 'Verifying...';
             spinner.classList.remove('hidden');
             errorEl.classList.add('hidden');
             
             try {
-                const isValid = await verifyPassword(password, admin.passwordHash, admin.salt);
-                
-                if (isValid && email === admin.email) {
-                    // Success
-                    admin.lastLogin = new Date().toISOString();
-                    admin.loginAttempts = 0;
-                    admin.lockedUntil = null;
-                    localStorage.setItem('nba_admin_user', JSON.stringify(admin));
-                    
-                    isAdminLoggedIn = true;
-                    sessionStorage.setItem('nba_admin_session', JSON.stringify({
-                        email: admin.email,
-                        time: Date.now()
-                    }));
-                    
-                    document.getElementById('admin-email').textContent = admin.email;
-                    closeAdminLogin();
-                    showAdminPanel();
-                    showToast(`Welcome back, ${admin.email}!`, 'success');
-                } else {
-                    // Failed
-                    admin.loginAttempts = (admin.loginAttempts || 0) + 1;
-                    
-                    if (admin.loginAttempts >= 5) {
-                        const lockTime = new Date(Date.now() + 30 * 60000); // 30 min lock
-                        admin.lockedUntil = lockTime.toISOString();
-                        errorEl.textContent = 'Too many failed attempts. Account locked for 30 minutes.';
-                    } else {
-                        const remaining = 5 - admin.loginAttempts;
-                        errorEl.textContent = `Invalid credentials. ${remaining} attempts remaining.`;
-                    }
-                    
-                    localStorage.setItem('nba_admin_user', JSON.stringify(admin));
-                    errorEl.classList.remove('hidden');
-                    
-                    // Shake animation
-                    document.getElementById('admin-login-form').classList.add('shake');
-                    setTimeout(() => {
-                        document.getElementById('admin-login-form').classList.remove('shake');
-                    }, 500);
-                }
+                const result = await NBAAdminAuth.login(email, password);
+                isAdminLoggedIn = true;
+                document.getElementById('admin-email').textContent = result.admin.email;
+                closeAdminLogin();
+                showAdminPanel();
+                showToast(`Welcome, ${result.admin.email}!`, 'success');
             } catch (error) {
-                errorEl.textContent = 'Login error. Please try again.';
+                errorEl.textContent = error.message || 'Login error. Please try again.';
                 errorEl.classList.remove('hidden');
             } finally {
                 btnText.textContent = 'Sign In';
@@ -893,98 +808,14 @@
         // Update admin credentials
         async function updateAdminCredentials(e) {
             e.preventDefault();
-            
-            const admin = getStoredAdmin();
-            const currentEmail = document.getElementById('current-email').value;
-            const newEmail = document.getElementById('new-email').value;
-            const currentPassword = document.getElementById('current-password-verify').value;
-            const newPassword = document.getElementById('new-password').value;
-            const confirmPassword = document.getElementById('confirm-new-password').value;
-            
             const errorEl = document.getElementById('settings-error');
-            const successEl = document.getElementById('settings-success');
-            const btnText = document.getElementById('settings-btn-text');
-            const spinner = document.getElementById('settings-spinner');
-            
-            errorEl.classList.add('hidden');
-            successEl.classList.add('hidden');
-            
-            // Verify current password
-            const isValid = await verifyPassword(currentPassword, admin.passwordHash, admin.salt);
-            if (!isValid) {
-                errorEl.textContent = 'Current password is incorrect';
-                errorEl.classList.remove('hidden');
-                return;
-            }
-            
-            // Validate new password if provided
-            if (newPassword) {
-                if (newPassword !== confirmPassword) {
-                    errorEl.textContent = 'New passwords do not match';
-                    errorEl.classList.remove('hidden');
-                    return;
-                }
-                if (newPassword.length < 8) {
-                    errorEl.textContent = 'Password must be at least 8 characters';
-                    errorEl.classList.remove('hidden');
-                    return;
-                }
-            }
-            
-            btnText.textContent = 'Updating...';
-            spinner.classList.remove('hidden');
-            
-            try {
-                // Update email if changed
-                if (newEmail && newEmail !== currentEmail) {
-                    admin.email = newEmail.toLowerCase().trim();
-                }
-                
-                // Update password if provided
-                if (newPassword) {
-                    const salt = generateSalt();
-                    const hashedPassword = await hashPassword(newPassword + salt);
-                    admin.passwordHash = hashedPassword;
-                    admin.salt = salt;
-                }
-                
-                admin.updatedAt = new Date().toISOString();
-                localStorage.setItem('nba_admin_user', JSON.stringify(admin));
-                
-                successEl.textContent = 'Credentials updated successfully! Please login again.';
-                successEl.classList.remove('hidden');
-                
-                setTimeout(() => {
-                    closeUserSettings();
-                    logoutAdmin();
-                    openAdminLogin();
-                    document.getElementById('admin-login-email').value = admin.email;
-                }, 2000);
-                
-            } catch (error) {
-                errorEl.textContent = 'Error updating credentials';
-                errorEl.classList.remove('hidden');
-            } finally {
-                btnText.textContent = 'Update';
-                spinner.classList.add('hidden');
-            }
+            errorEl.textContent = 'Admin accounts and invitations are managed in the secure admin portal.';
+            errorEl.classList.remove('hidden');
         }
 
         // Open user settings
         function openUserSettings() {
-            const admin = getStoredAdmin();
-            if (!admin) {
-                showToast('No admin account found', 'error');
-                return;
-            }
-            document.getElementById('current-email').value = admin.email;
-            document.getElementById('new-email').value = '';
-            document.getElementById('current-password-verify').value = '';
-            document.getElementById('new-password').value = '';
-            document.getElementById('confirm-new-password').value = '';
-            document.getElementById('settings-error').classList.add('hidden');
-            document.getElementById('settings-success').classList.add('hidden');
-            document.getElementById('user-settings-modal').classList.remove('hidden');
+            showToast('Admin accounts and invitations are managed in the secure admin portal.', 'info');
         }
 
         function closeUserSettings() {
@@ -1204,9 +1035,9 @@
             renderBlogs();
         }
 
-        function logoutAdmin() {
+        async function logoutAdmin() {
             isAdminLoggedIn = false;
-            sessionStorage.removeItem('nba_admin_session');
+            await NBAAdminAuth.logout().catch(() => {});
             closeAdminPanel();
             showToast('Logged out successfully', 'info');
         }
