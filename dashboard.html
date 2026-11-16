@@ -1265,7 +1265,7 @@
         // CONFIGURATION & DATA
         // ============================================
         const CONFIG = {
-            PAYSTACK_KEY: 'pk_test_a4b3115561fd37a1f029a3163a0a765291ec998a',
+            PAYSTACK_KEY: '',
             BRANCH_EMAIL: 'nbaawkabranch@gmail.com',
             SESSION_DURATION: 24 * 60 * 60 * 1000
         };
@@ -1324,8 +1324,17 @@
         async function clearSession() { try { await fetch((window.NBA_MEMBER_API || '/api') + '/auth/logout', {method:'POST',credentials:'include'}); } catch (_) {} }
         function getMemberData(mid) { const all = JSON.parse(localStorage.getItem('nba_member_data') || '{}'); return all[mid] || null; }
         function saveMemberData(mid, data) { const all = JSON.parse(localStorage.getItem('nba_member_data') || '{}'); all[mid] = { ...all[mid], ...data }; localStorage.setItem('nba_member_data', JSON.stringify(all)); }
-        function getPayments(mid) { const all = JSON.parse(localStorage.getItem('nba_payments') || '{}'); return all[mid] || []; }
-        function addPayment(mid, payment) { const all = JSON.parse(localStorage.getItem('nba_payments') || '{}'); if (!all[mid]) all[mid] = []; all[mid].unshift(payment); localStorage.setItem('nba_payments', JSON.stringify(all)); }
+        let memberPayments = [];
+        let memberDues = [];
+        function getPayments() { return memberPayments; }
+        async function refreshMemberPayments() {
+            const response = await fetch((window.NBA_MEMBER_API || '/api') + '/member-payments', { credentials: 'include' });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.error || 'Could not load your payment records.');
+            memberPayments = (result.payments || []).map(p => ({ type: p.dues_type, amount: Number(p.amount_ngn), reference: p.payment_reference, status: p.status, date: p.paid_at, method: p.method }));
+            memberDues = result.dues || [];
+            CONFIG.PAYSTACK_KEY = result.publicKey || '';
+        }
 
         // ============================================
         // INIT
@@ -1351,6 +1360,7 @@
             }
             const user = findUser(currentUser.membershipId) || findUser(currentUser.email);
             if (user) { memberData = { ...memberData, ...user }; saveMemberData(currentUser.membershipId, memberData); }
+            await refreshMemberPayments();
             renderDashboard(); renderDues(); renderPaymentHistory(); renderProfile();
             } catch (_) { window.location.href = 'membershiplogin.html'; }
         }
@@ -1389,9 +1399,9 @@
             else { avatar.textContent = (memberData.firstName?.[0] || 'M') + (memberData.lastName?.[0] || ''); }
 
             const dues = calculateDues();
-            const payments = getPayments(memberData.membershipId);
-            const totalPaid = payments.filter(p => p.status === 'success').reduce((sum, p) => sum + p.amount, 0);
-            const totalDue = dues.barCentreLevy.total + dues.branchDues.total;
+            const payments = getPayments();
+            const totalPaid = memberDues.filter(d => d.status === 'paid').reduce((sum, d) => sum + Number(d.paid_amount || 0), 0);
+            const totalDue = dues.barCentreLevy.total + dues.practisingFee.total + dues.branchDues.total;
             const outstanding = Math.max(0, totalDue - totalPaid);
 
             document.getElementById('stat-total-paid').textContent = 'N' + totalPaid.toLocaleString();
@@ -1414,9 +1424,11 @@
             } else {
                 const levyCat = getLevyCategory(memberData.yearOfCall);
                 const duesCat = getDuesCategory(memberData.yearOfCall);
-                const levyPaid = payments.filter(p => p.type === 'bar_centre_levy' && p.status === 'success').reduce((s, p) => s + p.amount, 0);
-                const duesPaid = payments.filter(p => p.type === 'branch_dues' && p.status === 'success').reduce((s, p) => s + p.amount, 0);
+                const levyPaid = Number(memberDues.find(d => d.dues_type === 'bar_centre_levy')?.paid_amount || 0);
+                const practisingPaid = Number(memberDues.find(d => d.dues_type === 'practising_fee')?.paid_amount || 0);
+                const duesPaid = Number(memberDues.find(d => d.dues_type === 'branch_dues')?.paid_amount || 0);
                 dc.innerHTML = '<table><tr><th>Fee Type</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Action</th></tr>' +
+                    '<tr><td><strong>Bar Practising Fee</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getLevyLabel(levyCat) + '</span></td><td>N' + dues.practisingFee.total.toLocaleString() + '</td><td>N' + practisingPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.practisingFee.total - practisingPaid).toLocaleString() + '</td><td>' + (practisingPaid >= dues.practisingFee.total && dues.practisingFee.total > 0 ? '<span class="status paid">Paid</span>' : '<button class="btn btn-sm btn-success" onclick="initiatePayment(\'practising_fee\', ' + (dues.practisingFee.total - practisingPaid) + ')"><i class="fas fa-credit-card"></i> Pay</button>') + '</td></tr>' +
                     '<tr><td><strong>Bar Centre Levy</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getLevyLabel(levyCat) + '</span></td><td>N' + dues.barCentreLevy.total.toLocaleString() + '</td><td>N' + levyPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.barCentreLevy.total - levyPaid).toLocaleString() + '</td><td>' + (levyPaid >= dues.barCentreLevy.total && dues.barCentreLevy.total > 0 ? '<span class="status paid">Paid</span>' : '<button class="btn btn-sm btn-success" onclick="initiatePayment(\'bar_centre_levy\', ' + (dues.barCentreLevy.total - levyPaid) + ')"><i class="fas fa-credit-card"></i> Pay</button>') + '</td></tr>' +
                     '<tr><td><strong>Branch Dues</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getDuesLabel(duesCat) + '</span></td><td>N' + dues.branchDues.total.toLocaleString() + '</td><td>N' + duesPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.branchDues.total - duesPaid).toLocaleString() + '</td><td>' + (duesPaid >= dues.branchDues.total && dues.branchDues.total > 0 ? '<span class="status paid">Paid</span>' : '<button class="btn btn-sm btn-success" onclick="initiatePayment(\'branch_dues\', ' + (dues.branchDues.total - duesPaid) + ')"><i class="fas fa-credit-card"></i> Pay</button>') + '</td></tr>' +
                     '</table>';
@@ -1434,13 +1446,17 @@
         }
 
         function calculateDues() {
-            if (!memberData || !memberData.yearOfCall) return { barCentreLevy: { total: 0, practisingFee: 0, levy: 0 }, branchDues: { total: 0 } };
+            if (!memberData || !memberData.yearOfCall) return { barCentreLevy: { total: 0 }, practisingFee: { total: 0 }, branchDues: { total: 0 } };
             const levyCat = getLevyCategory(memberData.yearOfCall);
             const duesCat = getDuesCategory(memberData.yearOfCall);
             const pf = FEE_DATA.practisingFee[levyCat] || 0;
             const bl = FEE_DATA.barCentreLevy[levyCat] || 0;
             const bd = FEE_DATA.branchDues[duesCat] || 0;
-            return { barCentreLevy: { total: pf + bl, practisingFee: pf, levy: bl, category: levyCat }, branchDues: { total: bd, category: duesCat } };
+            return {
+                barCentreLevy: { total: Number(memberDues.find(d => d.dues_type === 'bar_centre_levy')?.amount_due ?? bl), category: levyCat },
+                practisingFee: { total: Number(memberDues.find(d => d.dues_type === 'practising_fee')?.amount_due ?? pf), category: levyCat },
+                branchDues: { total: Number(memberDues.find(d => d.dues_type === 'branch_dues')?.amount_due ?? bd), category: duesCat }
+            };
         }
 
         // ============================================
@@ -1450,9 +1466,10 @@
             if (!memberData) return;
             document.getElementById('dues-year-display').textContent = memberData.yearOfCall ? (memberData.yearOfCall + ' (' + (new Date().getFullYear() - parseInt(memberData.yearOfCall)) + ' years)') : 'Not set';
             const dues = calculateDues();
-            const payments = getPayments(memberData.membershipId);
-            const levyPaid = payments.filter(p => p.type === 'bar_centre_levy' && p.status === 'success').reduce((s, p) => s + p.amount, 0);
-            const duesPaid = payments.filter(p => p.type === 'branch_dues' && p.status === 'success').reduce((s, p) => s + p.amount, 0);
+            const payments = getPayments();
+            const levyPaid = Number(memberDues.find(d => d.dues_type === 'bar_centre_levy')?.paid_amount || 0);
+            const practisingPaid = Number(memberDues.find(d => d.dues_type === 'practising_fee')?.paid_amount || 0);
+            const duesPaid = Number(memberDues.find(d => d.dues_type === 'branch_dues')?.paid_amount || 0);
             const container = document.getElementById('dues-cards');
 
             if (!memberData.yearOfCall) {
@@ -1461,18 +1478,23 @@
             }
 
             const levyFullyPaid = levyPaid >= dues.barCentreLevy.total && dues.barCentreLevy.total > 0;
+            const practisingFullyPaid = practisingPaid >= dues.practisingFee.total && dues.practisingFee.total > 0;
             const duesFullyPaid = duesPaid >= dues.branchDues.total && dues.branchDues.total > 0;
 
             container.innerHTML =
+                '<div class="due-card ' + (practisingFullyPaid ? 'paid' : '') + '">' +
+                '<div class="due-card-header"><div class="due-icon levy"><i class="fas fa-scale-balanced"></i></div><div><div class="due-title">Bar Practising Fee</div><div class="due-subtitle">' + getLevyLabel(dues.practisingFee.category) + '</div></div></div>' +
+                '<div class="due-amount"><span class="currency">N</span>' + dues.practisingFee.total.toLocaleString() + '</div>' +
+                '<div class="due-details">' +
+                '<li><span>Paid</span><span>N' + practisingPaid.toLocaleString() + '</span></li>' +
+                '<li><span>Balance</span><span style="color:' + (practisingFullyPaid ? '#4ade80' : '#fbbf24') + ';">N' + Math.max(0, dues.practisingFee.total - practisingPaid).toLocaleString() + '</span></li>' +
+                '</div>' +
+                (practisingFullyPaid ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> Fully Paid</div>' : '<button class="btn btn-success" style="width:100%;" onclick="initiatePayment(\'practising_fee\', ' + (dues.practisingFee.total - practisingPaid) + ')"><i class="fas fa-credit-card"></i> Pay N' + (dues.practisingFee.total - practisingPaid).toLocaleString() + '</button>') +
+                '</div>' +
                 '<div class="due-card ' + (levyFullyPaid ? 'paid' : '') + '">' +
                 '<div class="due-card-header"><div class="due-icon levy"><i class="fas fa-file-invoice"></i></div><div><div class="due-title">Bar Centre Levy</div><div class="due-subtitle">' + getLevyLabel(dues.barCentreLevy.category) + '</div></div></div>' +
                 '<div class="due-amount"><span class="currency">N</span>' + dues.barCentreLevy.total.toLocaleString() + '</div>' +
-                '<div class="due-details">' +
-                '<li><span>Bar Practising Fee</span><span>N' + dues.barCentreLevy.practisingFee.toLocaleString() + '</span></li>' +
-                '<li><span>Bar Centre Levy</span><span>N' + dues.barCentreLevy.levy.toLocaleString() + '</span></li>' +
-                '<li style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 6px;"><span>Paid</span><span>N' + levyPaid.toLocaleString() + '</span></li>' +
-                '<li><span>Balance</span><span style="color:' + (levyFullyPaid ? '#4ade80' : '#fbbf24') + ';">N' + Math.max(0, dues.barCentreLevy.total - levyPaid).toLocaleString() + '</span></li>' +
-                '</div>' +
+                '<div class="due-details"><li><span>Paid</span><span>N' + levyPaid.toLocaleString() + '</span></li><li><span>Balance</span><span style="color:' + (levyFullyPaid ? '#4ade80' : '#fbbf24') + ';">N' + Math.max(0, dues.barCentreLevy.total - levyPaid).toLocaleString() + '</span></li></div>' +
                 (levyFullyPaid ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> Fully Paid</div>' : '<button class="btn btn-success" style="width:100%;" onclick="initiatePayment(\'bar_centre_levy\', ' + (dues.barCentreLevy.total - levyPaid) + ')"><i class="fas fa-credit-card"></i> Pay N' + (dues.barCentreLevy.total - levyPaid).toLocaleString() + '</button>') +
                 '</div>' +
                 '<div class="due-card ' + (duesFullyPaid ? 'paid' : '') + '">' +
@@ -1487,14 +1509,15 @@
                 '</div>' +
                 '<div class="due-card" style="border-color: #D4AF37;">' +
                 '<div class="due-card-header"><div class="due-icon" style="background: rgba(212,175,55,0.15); color: #D4AF37;"><i class="fas fa-wallet"></i></div><div><div class="due-title">Pay All Dues</div><div class="due-subtitle">Combined payment</div></div></div>' +
-                '<div class="due-amount" style="color: #D4AF37;"><span class="currency">N</span>' + (dues.barCentreLevy.total + dues.branchDues.total).toLocaleString() + '</div>' +
+                '<div class="due-amount" style="color: #D4AF37;"><span class="currency">N</span>' + (dues.practisingFee.total + dues.barCentreLevy.total + dues.branchDues.total).toLocaleString() + '</div>' +
                 '<div class="due-details">' +
+                '<li><span>Bar Practising Fee</span><span>N' + dues.practisingFee.total.toLocaleString() + '</span></li>' +
                 '<li><span>Bar Centre Levy</span><span>N' + dues.barCentreLevy.total.toLocaleString() + '</span></li>' +
                 '<li><span>Branch Dues</span><span>N' + dues.branchDues.total.toLocaleString() + '</span></li>' +
-                '<li style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 6px;"><span>Total Paid</span><span>N' + (levyPaid + duesPaid).toLocaleString() + '</span></li>' +
-                '<li><span>Total Balance</span><span style="color:#fbbf24;">N' + Math.max(0, (dues.barCentreLevy.total + dues.branchDues.total) - (levyPaid + duesPaid)).toLocaleString() + '</span></li>' +
+                '<li style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 6px;"><span>Total Paid</span><span>N' + (practisingPaid + levyPaid + duesPaid).toLocaleString() + '</span></li>' +
+                '<li><span>Total Balance</span><span style="color:#fbbf24;">N' + Math.max(0, (dues.practisingFee.total + dues.barCentreLevy.total + dues.branchDues.total) - (practisingPaid + levyPaid + duesPaid)).toLocaleString() + '</span></li>' +
                 '</div>' +
-                ((levyPaid + duesPaid) >= (dues.barCentreLevy.total + dues.branchDues.total) ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> All Dues Paid!</div>' : '<button class="btn" style="width:100%; background: linear-gradient(135deg, #D4AF37, #B8960C); color: #0f172a;" onclick="initiatePayment(\'combined\', ' + ((dues.barCentreLevy.total + dues.branchDues.total) - (levyPaid + duesPaid)) + ')"><i class="fas fa-credit-card"></i> Pay All N' + ((dues.barCentreLevy.total + dues.branchDues.total) - (levyPaid + duesPaid)).toLocaleString() + '</button>') +
+                ((levyPaid + duesPaid + practisingPaid) >= (dues.barCentreLevy.total + dues.branchDues.total + dues.practisingFee.total) ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> All Dues Paid!</div>' : '<p style="text-align:center;color:#94a3b8;font-size:0.9rem;">Pay each fee separately so every receipt is tracked under the right category.</p>') +
                 '</div>';
 
             renderPaymentHistoryList('payment-history-list', 5);
@@ -1650,7 +1673,7 @@
             currentPaymentType = type;
             currentPaymentAmount = amount;
 
-            const titles = { 'bar_centre_levy': 'Pay Bar Centre Levy', 'branch_dues': 'Pay Branch Dues', 'combined': 'Pay All Dues' };
+            const titles = { 'bar_centre_levy': 'Pay Bar Centre Levy', 'practising_fee': 'Pay Bar Practising Fee', 'branch_dues': 'Pay Branch Dues' };
             document.getElementById('payment-modal-title').textContent = titles[type] || 'Make Payment';
 
             const body = document.getElementById('payment-modal-body');
@@ -1678,35 +1701,42 @@
         function closePaymentModal() { document.getElementById('payment-modal').classList.remove('active'); }
 
         function processPaystackPayment() {
-            if (!memberData || currentPaymentAmount <= 0) return;
+            if (!memberData || currentPaymentAmount <= 0 || !['bar_centre_levy', 'practising_fee', 'branch_dues'].includes(currentPaymentType)) return;
+            if (!CONFIG.PAYSTACK_KEY) { showToast('Online payment is not configured. Please contact the branch.', 'error'); return; }
+            if (typeof PaystackPop === 'undefined') { showToast('Secure payment checkout did not load. Please refresh and try again.', 'error'); return; }
+            const paymentType = currentPaymentType;
+            const paymentAmount = currentPaymentAmount;
+            const member = { ...memberData };
 
             const handler = PaystackPop.setup({
                 key: CONFIG.PAYSTACK_KEY,
-                email: memberData.email,
-                amount: currentPaymentAmount * 100,
+                email: member.email,
+                amount: paymentAmount * 100,
                 currency: 'NGN',
-                ref: 'NBA_AWK_' + memberData.membershipId + '_' + Date.now(),
+                ref: 'NBA_AWK_' + member.membershipId + '_' + Date.now(),
                 metadata: {
                     custom_fields: [
-                        { display_name: "Payment Type", variable_name: "payment_type", value: currentPaymentType },
-                        { display_name: "Membership ID", variable_name: "membership_id", value: memberData.membershipId },
-                        { display_name: "Member Name", variable_name: "member_name", value: memberData.firstName + ' ' + memberData.lastName },
-                        { display_name: "Year of Call", variable_name: "year_of_call", value: memberData.yearOfCall }
-                    ]
+                        { display_name: "Payment Type", variable_name: "payment_type", value: paymentType },
+                        { display_name: "Membership ID", variable_name: "membership_id", value: member.membershipId },
+                        { display_name: "Member Name", variable_name: "member_name", value: member.firstName + ' ' + member.lastName },
+                        { display_name: "Year of Call", variable_name: "year_of_call", value: member.yearOfCall }
+                    ], payment_type: paymentType, membership_id: member.membershipId
                 },
-                callback: function (response) {
+                callback: async function (response) {
                     closePaymentModal();
-                    const payment = {
-                        type: currentPaymentType,
-                        amount: currentPaymentAmount,
-                        reference: response.reference,
-                        status: 'success',
-                        date: new Date().toISOString(),
-                        method: 'Paystack'
-                    };
-                    addPayment(memberData.membershipId, payment);
-                    renderDashboard(); renderDues(); renderPaymentHistory();
-                    showToast('Payment successful! Reference: ' + response.reference, 'success');
+                    try {
+                        const verifyResponse = await fetch((window.NBA_MEMBER_API || '/api') + '/member-payments', {
+                            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ reference: response.reference, duesType: paymentType })
+                        });
+                        const result = await verifyResponse.json().catch(() => ({}));
+                        if (!verifyResponse.ok) throw new Error(result.error || 'Payment could not be verified.');
+                        await refreshMemberPayments();
+                        renderDashboard(); renderDues(); renderPaymentHistory(); renderProfile();
+                        showToast('Payment verified and recorded. Reference: ' + response.reference, 'success');
+                    } catch (error) {
+                        showToast((error.message || 'Payment verification failed.') + ' Keep your reference: ' + response.reference, 'error');
+                    }
                 },
                 onClose: function () {
                     showToast('Payment window closed', 'error');
@@ -1719,7 +1749,7 @@
         // UTILITY FUNCTIONS
         // ============================================
         function formatPaymentType(type) {
-            const map = { 'bar_centre_levy': 'Bar Centre Levy', 'branch_dues': 'Branch Dues', 'combined': 'Combined Dues', 'donation': 'Donation', 'project': 'Project Sponsorship' };
+            const map = { 'bar_centre_levy': 'Bar Centre Levy', 'practising_fee': 'Bar Practising Fee', 'branch_dues': 'Branch Dues', 'combined': 'Combined Dues', 'donation': 'Donation', 'project': 'Project Sponsorship' };
             return map[type] || type;
         }
 

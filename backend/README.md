@@ -25,5 +25,8 @@ Use Vercel Node.js Functions and managed PostgreSQL through a Marketplace integr
 - `POST /api/auth/forgot-password` sends a reset link without revealing if an account exists.
 - `POST /api/auth/reset-password` consumes the one-use link.
 - `GET /api/auth/me` and `POST /api/auth/logout` manage the session.
+- `GET /api/member-payments` returns the signed-in member's fee schedule and payment history. `POST /api/member-payments` verifies a Paystack transaction against the server-calculated fee and records it to PostgreSQL; the corresponding dues entry is then visible in the admin portal.
+
+Configure `PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY` in Vercel for the same Paystack mode (both test or both live), then redeploy. The public key is returned to the member page for checkout. The secret key is used only on the server to verify Paystack references. Each online payment must match the member, fee category, currency, and full fee amount before it is recorded. Direct bank transfers remain manually recordable by an admin in the dues ledger.
 
 Legacy browser `localStorage` is not imported: it is device-local and may contain plaintext passwords. Members must register again through the new flow.

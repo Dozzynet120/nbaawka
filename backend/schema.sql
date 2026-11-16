@@ -52,3 +52,17 @@ CREATE TABLE IF NOT EXISTS member_dues (
  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  UNIQUE(member_id,dues_year,dues_type)
 );
+CREATE TABLE IF NOT EXISTS member_payments (
+ id BIGSERIAL PRIMARY KEY,
+ member_id BIGINT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ dues_year INTEGER NOT NULL CHECK(dues_year BETWEEN 2000 AND 2200),
+ dues_type TEXT NOT NULL CHECK(dues_type IN ('branch_dues','bar_centre_levy','practising_fee')),
+ amount_ngn NUMERIC(14,2) NOT NULL CHECK(amount_ngn > 0),
+ currency TEXT NOT NULL DEFAULT 'NGN' CHECK(currency='NGN'),
+ payment_reference TEXT NOT NULL UNIQUE,
+ method TEXT NOT NULL DEFAULT 'Paystack',
+ status TEXT NOT NULL DEFAULT 'success' CHECK(status='success'),
+ paid_at TIMESTAMPTZ NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS member_payments_member_paid_idx ON member_payments(member_id,paid_at DESC);

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { pool } from '../../backend/src/db.js';
 import { currentAdmin } from '../../backend/src/admin-auth.js';
+import { dueAmount } from '../../backend/src/dues.js';
 
 const duesSchema = z.object({
   memberId: z.coerce.number().int().positive(),
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
       const parsedYear = Number(req.query?.year);
       const year = Number.isInteger(parsedYear) && parsedYear >= 2000 && parsedYear <= 2200 ? parsedYear : new Date().getFullYear();
       const { rows } = await pool.query(
-        `SELECT m.id AS member_id,m.first_name,m.middle_name,m.last_name,m.email,m.membership_id,
+        `SELECT m.id AS member_id,m.first_name,m.middle_name,m.last_name,m.email,m.membership_id,m.year_of_call,
                 t.dues_type,d.id AS dues_id,d.dues_year,d.amount_ngn,d.status,d.payment_reference,d.verified_by,d.paid_at,d.updated_at
          FROM members m
          CROSS JOIN (VALUES ('branch_dues'::text),('bar_centre_levy'::text),('practising_fee'::text)) AS t(dues_type)
@@ -51,7 +52,7 @@ export default async function handler(req, res) {
          ORDER BY m.last_name,m.first_name`,
         [year],
       );
-      return res.status(200).json({ year, dues: rows });
+      return res.status(200).json({ year, dues: rows.map(row => ({ ...row, amount_due_ngn: dueAmount(row.dues_type, row.year_of_call, year) })) });
     }
     const parsed = duesSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Check the dues details.' });
