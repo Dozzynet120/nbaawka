@@ -2,6 +2,9 @@
   "functions": {
     "api/[...slug].js": { "maxDuration": 30 },
     "api/admin/bootstrap/complete.js": { "maxDuration": 30 },
-    "api/admin/login.js": { "maxDuration": 30 }
+    "api/admin/login.js": { "maxDuration": 30 },
+    "api/admin/me.js": { "maxDuration": 30 },
+    "api/admin/invitations.js": { "maxDuration": 30 },
+    "api/admin/invitations/accept.js": { "maxDuration": 30 }
   }
 }
