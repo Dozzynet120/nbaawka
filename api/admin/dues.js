@@ -7,7 +7,7 @@ const duesSchema = z.object({
   memberId: z.coerce.number().int().positive(),
   year: z.coerce.number().int().min(2000).max(2200),
   duesType: z.enum(['branch_dues', 'bar_centre_levy', 'practising_fee']),
-  status: z.enum(['unpaid', 'paid', 'waived']),
+  status: z.enum(['unpaid', 'pending', 'paid', 'waived']),
   amount: z.union([z.coerce.number().finite().nonnegative(), z.literal(''), z.null()]).optional(),
   reference: z.string().trim().max(160).optional().default(''),
 });
@@ -27,6 +27,8 @@ async function ensureDuesTable() {
   )`);
   await pool.query("ALTER TABLE member_dues ADD COLUMN IF NOT EXISTS dues_type TEXT NOT NULL DEFAULT 'branch_dues' CHECK(dues_type IN ('branch_dues','bar_centre_levy','practising_fee'))");
   await pool.query('ALTER TABLE member_dues DROP CONSTRAINT IF EXISTS member_dues_member_id_dues_year_key');
+  await pool.query('ALTER TABLE member_dues DROP CONSTRAINT IF EXISTS member_dues_status_check');
+  await pool.query("ALTER TABLE member_dues ADD CONSTRAINT member_dues_status_check CHECK(status IN ('unpaid','pending','paid','waived'))");
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS member_dues_member_year_type_idx ON member_dues(member_id,dues_year,dues_type)');
 }
 
@@ -61,7 +63,11 @@ export default async function handler(req, res) {
     if (status === 'paid' && (!Number.isFinite(amount) || amount <= 0)) return res.status(400).json({ error: 'Enter the amount received before marking dues paid.' });
     const member = await pool.query("SELECT id FROM members WHERE id=$1 AND status='active'", [memberId]);
     if (!member.rows[0]) return res.status(404).json({ error: 'Active member was not found.' });
-    const { rows } = await pool.query(
+    const client = await pool.connect();
+    let rows;
+    try {
+    await client.query('BEGIN');
+    const result = await client.query(
       `INSERT INTO member_dues(member_id,dues_year,dues_type,amount_ngn,status,payment_reference,verified_by,paid_at,updated_at)
        VALUES($1,$2,$3,$4,$5,NULLIF($6,''),CASE WHEN $5='paid' THEN $7 ELSE NULL END,CASE WHEN $5='paid' THEN now() ELSE NULL END,now())
        ON CONFLICT(member_id,dues_year,dues_type) DO UPDATE SET amount_ngn=excluded.amount_ngn,status=excluded.status,
@@ -69,7 +75,21 @@ export default async function handler(req, res) {
        RETURNING member_id,dues_year,dues_type,amount_ngn,status,payment_reference,verified_by,paid_at,updated_at`,
       [memberId, year, duesType, amount, status, reference, admin.email],
     );
-    return res.status(200).json({ dues: rows[0], message: status === 'paid' ? 'Payment recorded as verified.' : status === 'waived' ? 'Dues marked as waived.' : 'Dues marked unpaid.' });
+    rows = result.rows;
+    const paymentTable = await client.query("SELECT to_regclass('public.member_payments') AS table_name");
+    if (paymentTable.rows[0].table_name && status === 'paid') {
+      await client.query("UPDATE member_payments SET status='success',reviewed_by=$1,reviewed_at=now(),paid_at=COALESCE(paid_at,now()) WHERE member_id=$2 AND dues_year=$3 AND dues_type=$4 AND payment_reference=NULLIF($5,'') AND status='pending'", [admin.email, memberId, year, duesType, reference]);
+    } else if (paymentTable.rows[0].table_name && status === 'unpaid' && reference) {
+      await client.query("UPDATE member_payments SET status='rejected',reviewed_by=$1,reviewed_at=now() WHERE member_id=$2 AND dues_year=$3 AND dues_type=$4 AND payment_reference=$5 AND status='pending'", [admin.email, memberId, year, duesType, reference]);
+    }
+    await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    return res.status(200).json({ dues: rows[0], message: status === 'paid' ? 'Payment recorded as verified.' : status === 'waived' ? 'Dues marked as waived.' : status === 'pending' ? 'Transfer marked as awaiting confirmation.' : 'Dues marked unpaid.' });
   } catch (error) {
     console.error('Admin dues request failed:', error.code || 'unknown');
     return res.status(500).json({ error: 'Dues records could not be processed.' });

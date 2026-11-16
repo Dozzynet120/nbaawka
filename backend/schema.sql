@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS member_dues (
  dues_year INTEGER NOT NULL CHECK(dues_year BETWEEN 2000 AND 2200),
  dues_type TEXT NOT NULL DEFAULT 'branch_dues' CHECK(dues_type IN ('branch_dues','bar_centre_levy','practising_fee')),
  amount_ngn NUMERIC(14,2),
- status TEXT NOT NULL DEFAULT 'unpaid' CHECK(status IN ('unpaid','paid','waived')),
+ status TEXT NOT NULL DEFAULT 'unpaid' CHECK(status IN ('unpaid','pending','paid','waived')),
  payment_reference TEXT,
  verified_by TEXT,
  paid_at TIMESTAMPTZ,
@@ -60,9 +60,13 @@ CREATE TABLE IF NOT EXISTS member_payments (
  amount_ngn NUMERIC(14,2) NOT NULL CHECK(amount_ngn > 0),
  currency TEXT NOT NULL DEFAULT 'NGN' CHECK(currency='NGN'),
  payment_reference TEXT NOT NULL UNIQUE,
- method TEXT NOT NULL DEFAULT 'Paystack',
- status TEXT NOT NULL DEFAULT 'success' CHECK(status='success'),
- paid_at TIMESTAMPTZ NOT NULL,
+ method TEXT NOT NULL DEFAULT 'bank_transfer',
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','success','rejected')),
+ transfer_date DATE NOT NULL,
+ reviewed_by TEXT,
+ reviewed_at TIMESTAMPTZ,
+ paid_at TIMESTAMPTZ,
  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS member_payments_member_paid_idx ON member_payments(member_id,paid_at DESC);
+CREATE INDEX IF NOT EXISTS member_payments_member_paid_idx ON member_payments(member_id,created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS member_payments_one_pending_transfer_idx ON member_payments(member_id,dues_year,dues_type) WHERE method='bank_transfer' AND status='pending';

@@ -7,7 +7,6 @@
     <title>Member Dashboard | NBA Awka Branch</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://js.paystack.co/v1/inline.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -275,6 +274,11 @@
         .status.pending {
             background: #451a03;
             color: #fbbf24;
+        }
+
+        .status.rejected {
+            background: #7f1d1d;
+            color: #fecaca;
         }
 
         .status.overdue {
@@ -1265,7 +1269,6 @@
         // CONFIGURATION & DATA
         // ============================================
         const CONFIG = {
-            PAYSTACK_KEY: '',
             BRANCH_EMAIL: 'nbaawkabranch@gmail.com',
             SESSION_DURATION: 24 * 60 * 60 * 1000
         };
@@ -1331,9 +1334,14 @@
             const response = await fetch((window.NBA_MEMBER_API || '/api') + '/member-payments', { credentials: 'include' });
             const result = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(result.error || 'Could not load your payment records.');
-            memberPayments = (result.payments || []).map(p => ({ type: p.dues_type, amount: Number(p.amount_ngn), reference: p.payment_reference, status: p.status, date: p.paid_at, method: p.method }));
+            memberPayments = (result.payments || []).map(p => ({ type: p.dues_type, amount: Number(p.amount_ngn), reference: p.payment_reference, status: p.status, date: p.paid_at || p.created_at, method: p.method }));
             memberDues = result.dues || [];
-            CONFIG.PAYSTACK_KEY = result.publicKey || '';
+        }
+        function duesAction(type, paid, total, compact = false) {
+            if (Number(total) > 0 && Number(paid) >= Number(total)) return '<span class="status paid">Paid</span>';
+            if (memberDues.find(d => d.dues_type === type)?.status === 'pending') return '<span class="status pending">Transfer submitted</span>';
+            const amount = Math.max(0, Number(total) - Number(paid));
+            return '<button class="btn ' + (compact ? 'btn-sm ' : '') + 'btn-success" ' + (compact ? '' : 'style="width:100%;"') + ' onclick="initiatePayment(\'' + type + '\', ' + amount + ')"><i class="fas fa-university"></i> ' + (compact ? 'Pay' : 'Transfer N' + amount.toLocaleString()) + '</button>';
         }
 
         // ============================================
@@ -1428,9 +1436,9 @@
                 const practisingPaid = Number(memberDues.find(d => d.dues_type === 'practising_fee')?.paid_amount || 0);
                 const duesPaid = Number(memberDues.find(d => d.dues_type === 'branch_dues')?.paid_amount || 0);
                 dc.innerHTML = '<table><tr><th>Fee Type</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Action</th></tr>' +
-                    '<tr><td><strong>Bar Practising Fee</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getLevyLabel(levyCat) + '</span></td><td>N' + dues.practisingFee.total.toLocaleString() + '</td><td>N' + practisingPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.practisingFee.total - practisingPaid).toLocaleString() + '</td><td>' + (practisingPaid >= dues.practisingFee.total && dues.practisingFee.total > 0 ? '<span class="status paid">Paid</span>' : '<button class="btn btn-sm btn-success" onclick="initiatePayment(\'practising_fee\', ' + (dues.practisingFee.total - practisingPaid) + ')"><i class="fas fa-credit-card"></i> Pay</button>') + '</td></tr>' +
-                    '<tr><td><strong>Bar Centre Levy</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getLevyLabel(levyCat) + '</span></td><td>N' + dues.barCentreLevy.total.toLocaleString() + '</td><td>N' + levyPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.barCentreLevy.total - levyPaid).toLocaleString() + '</td><td>' + (levyPaid >= dues.barCentreLevy.total && dues.barCentreLevy.total > 0 ? '<span class="status paid">Paid</span>' : '<button class="btn btn-sm btn-success" onclick="initiatePayment(\'bar_centre_levy\', ' + (dues.barCentreLevy.total - levyPaid) + ')"><i class="fas fa-credit-card"></i> Pay</button>') + '</td></tr>' +
-                    '<tr><td><strong>Branch Dues</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getDuesLabel(duesCat) + '</span></td><td>N' + dues.branchDues.total.toLocaleString() + '</td><td>N' + duesPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.branchDues.total - duesPaid).toLocaleString() + '</td><td>' + (duesPaid >= dues.branchDues.total && dues.branchDues.total > 0 ? '<span class="status paid">Paid</span>' : '<button class="btn btn-sm btn-success" onclick="initiatePayment(\'branch_dues\', ' + (dues.branchDues.total - duesPaid) + ')"><i class="fas fa-credit-card"></i> Pay</button>') + '</td></tr>' +
+                    '<tr><td><strong>Bar Practising Fee</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getLevyLabel(levyCat) + '</span></td><td>N' + dues.practisingFee.total.toLocaleString() + '</td><td>N' + practisingPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.practisingFee.total - practisingPaid).toLocaleString() + '</td><td>' + duesAction('practising_fee', practisingPaid, dues.practisingFee.total, true) + '</td></tr>' +
+                    '<tr><td><strong>Bar Centre Levy</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getLevyLabel(levyCat) + '</span></td><td>N' + dues.barCentreLevy.total.toLocaleString() + '</td><td>N' + levyPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.barCentreLevy.total - levyPaid).toLocaleString() + '</td><td>' + duesAction('bar_centre_levy', levyPaid, dues.barCentreLevy.total, true) + '</td></tr>' +
+                    '<tr><td><strong>Branch Dues</strong><br><span style="font-size:0.8rem;color:#94a3b8;">' + getDuesLabel(duesCat) + '</span></td><td>N' + dues.branchDues.total.toLocaleString() + '</td><td>N' + duesPaid.toLocaleString() + '</td><td>N' + Math.max(0, dues.branchDues.total - duesPaid).toLocaleString() + '</td><td>' + duesAction('branch_dues', duesPaid, dues.branchDues.total, true) + '</td></tr>' +
                     '</table>';
             }
 
@@ -1489,13 +1497,13 @@
                 '<li><span>Paid</span><span>N' + practisingPaid.toLocaleString() + '</span></li>' +
                 '<li><span>Balance</span><span style="color:' + (practisingFullyPaid ? '#4ade80' : '#fbbf24') + ';">N' + Math.max(0, dues.practisingFee.total - practisingPaid).toLocaleString() + '</span></li>' +
                 '</div>' +
-                (practisingFullyPaid ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> Fully Paid</div>' : '<button class="btn btn-success" style="width:100%;" onclick="initiatePayment(\'practising_fee\', ' + (dues.practisingFee.total - practisingPaid) + ')"><i class="fas fa-credit-card"></i> Pay N' + (dues.practisingFee.total - practisingPaid).toLocaleString() + '</button>') +
+                duesAction('practising_fee', practisingPaid, dues.practisingFee.total) +
                 '</div>' +
                 '<div class="due-card ' + (levyFullyPaid ? 'paid' : '') + '">' +
                 '<div class="due-card-header"><div class="due-icon levy"><i class="fas fa-file-invoice"></i></div><div><div class="due-title">Bar Centre Levy</div><div class="due-subtitle">' + getLevyLabel(dues.barCentreLevy.category) + '</div></div></div>' +
                 '<div class="due-amount"><span class="currency">N</span>' + dues.barCentreLevy.total.toLocaleString() + '</div>' +
                 '<div class="due-details"><li><span>Paid</span><span>N' + levyPaid.toLocaleString() + '</span></li><li><span>Balance</span><span style="color:' + (levyFullyPaid ? '#4ade80' : '#fbbf24') + ';">N' + Math.max(0, dues.barCentreLevy.total - levyPaid).toLocaleString() + '</span></li></div>' +
-                (levyFullyPaid ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> Fully Paid</div>' : '<button class="btn btn-success" style="width:100%;" onclick="initiatePayment(\'bar_centre_levy\', ' + (dues.barCentreLevy.total - levyPaid) + ')"><i class="fas fa-credit-card"></i> Pay N' + (dues.barCentreLevy.total - levyPaid).toLocaleString() + '</button>') +
+                duesAction('bar_centre_levy', levyPaid, dues.barCentreLevy.total) +
                 '</div>' +
                 '<div class="due-card ' + (duesFullyPaid ? 'paid' : '') + '">' +
                 '<div class="due-card-header"><div class="due-icon dues"><i class="fas fa-building"></i></div><div><div class="due-title">Branch Dues</div><div class="due-subtitle">' + getDuesLabel(dues.branchDues.category) + '</div></div></div>' +
@@ -1505,7 +1513,7 @@
                 '<li style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 6px;"><span>Paid</span><span>N' + duesPaid.toLocaleString() + '</span></li>' +
                 '<li><span>Balance</span><span style="color:' + (duesFullyPaid ? '#4ade80' : '#fbbf24') + ';">N' + Math.max(0, dues.branchDues.total - duesPaid).toLocaleString() + '</span></li>' +
                 '</div>' +
-                (duesFullyPaid ? '<div style="text-align:center;padding:12px;background:#064e3b;border-radius:8px;color:#4ade80;font-weight:600;"><i class="fas fa-check-circle"></i> Fully Paid</div>' : '<button class="btn btn-success" style="width:100%;" onclick="initiatePayment(\'branch_dues\', ' + (dues.branchDues.total - duesPaid) + ')"><i class="fas fa-credit-card"></i> Pay N' + (dues.branchDues.total - duesPaid).toLocaleString() + '</button>') +
+                duesAction('branch_dues', duesPaid, dues.branchDues.total) +
                 '</div>' +
                 '<div class="due-card" style="border-color: #D4AF37;">' +
                 '<div class="due-card-header"><div class="due-icon" style="background: rgba(212,175,55,0.15); color: #D4AF37;"><i class="fas fa-wallet"></i></div><div><div class="due-title">Pay All Dues</div><div class="due-subtitle">Combined payment</div></div></div>' +
@@ -1685,64 +1693,46 @@
                 '<div style="font-size: 2.5rem; font-weight: 700; color: #38bdf8; margin: 8px 0;">N' + amount.toLocaleString() + '</div>' +
                 '<div style="font-size: 0.85rem; color: #64748b;">Membership ID: ' + memberData.membershipId + '</div>' +
                 '</div>' +
-                '<div style="display: flex; gap: 12px;">' +
-                '<button class="btn btn-success" style="flex: 1; padding: 14px;" onclick="processPaystackPayment()">' +
-                '<span class="spinner"></span><span class="btn-text"><i class="fas fa-credit-card"></i> Pay with Paystack</span>' +
-                '</button>' +
-                '<button class="btn btn-secondary" style="flex: 1; padding: 14px;" onclick="closePaymentModal()">Cancel</button>' +
+                '<div style="margin:16px 0;padding:16px;background:rgba(212,175,55,0.1);border-radius:10px;border:1px solid rgba(212,175,55,0.3);">' +
+                '<div style="font-weight:700;color:#D4AF37;margin-bottom:8px;"><i class="fas fa-university"></i> Bank transfer details</div>' +
+                '<div style="color:#e2e8f0;line-height:1.7;"><strong>Bank:</strong> Access Bank<br><strong>Account name:</strong> NBA Awka Branch<br><strong>Account number:</strong> 0699620549</div>' +
+                '<p style="font-size:0.82rem;color:#cbd5e1;margin:10px 0 0;">Transfer the exact amount above, then enter your bank transaction reference below. An administrator will confirm receipt.</p>' +
                 '</div>' +
-                '<div style="margin-top: 16px; padding: 12px; background: rgba(212,175,55,0.1); border-radius: 8px; border: 1px solid rgba(212,175,55,0.2);">' +
-                '<p style="font-size: 0.8rem; color: #D4AF37; margin: 0;"><i class="fas fa-university"></i> <strong>Bank Transfer:</strong> Access Bank | 0699620549 | NBA Awka Branch</p>' +
-                '</div>' +
+                '<form id="bank-transfer-form" onsubmit="submitBankTransfer(event)">' +
+                '<label for="bank-transfer-reference" style="display:block;margin:12px 0 6px;">Bank transaction reference</label>' +
+                '<input id="bank-transfer-reference" name="reference" required minlength="4" maxlength="160" autocomplete="off" style="width:100%;padding:12px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#fff;" placeholder="Reference from your bank receipt">' +
+                '<label for="bank-transfer-date" style="display:block;margin:12px 0 6px;">Transfer date</label>' +
+                '<input id="bank-transfer-date" name="transferDate" type="date" required max="' + new Date().toISOString().slice(0, 10) + '" style="width:100%;padding:12px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#fff;">' +
+                '<div style="display:flex;gap:12px;margin-top:16px;">' +
+                '<button class="btn btn-success" type="submit" style="flex:1;padding:14px;"><i class="fas fa-paper-plane"></i> Submit transfer for review</button>' +
+                '<button class="btn btn-secondary" type="button" style="flex:1;padding:14px;" onclick="closePaymentModal()">Cancel</button>' +
+                '</div></form>' +
                 '</div>';
             document.getElementById('payment-modal').classList.add('active');
         }
 
         function closePaymentModal() { document.getElementById('payment-modal').classList.remove('active'); }
 
-        function processPaystackPayment() {
-            if (!memberData || currentPaymentAmount <= 0 || !['bar_centre_levy', 'practising_fee', 'branch_dues'].includes(currentPaymentType)) return;
-            if (!CONFIG.PAYSTACK_KEY) { showToast('Online payment is not configured. Please contact the branch.', 'error'); return; }
-            if (typeof PaystackPop === 'undefined') { showToast('Secure payment checkout did not load. Please refresh and try again.', 'error'); return; }
-            const paymentType = currentPaymentType;
-            const paymentAmount = currentPaymentAmount;
-            const member = { ...memberData };
-
-            const handler = PaystackPop.setup({
-                key: CONFIG.PAYSTACK_KEY,
-                email: member.email,
-                amount: paymentAmount * 100,
-                currency: 'NGN',
-                ref: 'NBA_AWK_' + member.membershipId + '_' + Date.now(),
-                metadata: {
-                    custom_fields: [
-                        { display_name: "Payment Type", variable_name: "payment_type", value: paymentType },
-                        { display_name: "Membership ID", variable_name: "membership_id", value: member.membershipId },
-                        { display_name: "Member Name", variable_name: "member_name", value: member.firstName + ' ' + member.lastName },
-                        { display_name: "Year of Call", variable_name: "year_of_call", value: member.yearOfCall }
-                    ], payment_type: paymentType, membership_id: member.membershipId
-                },
-                callback: async function (response) {
-                    closePaymentModal();
-                    try {
-                        const verifyResponse = await fetch((window.NBA_MEMBER_API || '/api') + '/member-payments', {
-                            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ reference: response.reference, duesType: paymentType })
-                        });
-                        const result = await verifyResponse.json().catch(() => ({}));
-                        if (!verifyResponse.ok) throw new Error(result.error || 'Payment could not be verified.');
-                        await refreshMemberPayments();
-                        renderDashboard(); renderDues(); renderPaymentHistory(); renderProfile();
-                        showToast('Payment verified and recorded. Reference: ' + response.reference, 'success');
-                    } catch (error) {
-                        showToast((error.message || 'Payment verification failed.') + ' Keep your reference: ' + response.reference, 'error');
-                    }
-                },
-                onClose: function () {
-                    showToast('Payment window closed', 'error');
-                }
-            });
-            handler.openIframe();
+        async function submitBankTransfer(event) {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                const response = await fetch((window.NBA_MEMBER_API || '/api') + '/member-payments', {
+                    method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ duesType: currentPaymentType, reference: form.elements.reference.value.trim(), transferDate: form.elements.transferDate.value })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.error || 'Transfer submission could not be saved.');
+                closePaymentModal();
+                await refreshMemberPayments();
+                renderDashboard(); renderDues(); renderPaymentHistory(); renderProfile();
+                showToast(result.message, 'success');
+            } catch (error) {
+                showToast(error.message || 'Transfer submission could not be saved.', 'error');
+                button.disabled = false;
+            }
         }
 
         // ============================================
