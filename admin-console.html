@@ -219,7 +219,7 @@
       button.disabled = true; $('announcement-status').textContent = 'Preparing the meeting notice…';
       try {
         const attachmentContent = await fileToBase64(file);
-        const result = await api('announcements', { method: 'POST', body: JSON.stringify({ subject: $('notice-subject').value, meetingTitle: $('notice-title').value, meetingAt: $('notice-date').value, venue: $('notice-venue').value, body: $('notice-body').value, attachmentName: file.name, attachmentType, attachmentContent }) });
+        const result = await api('dues?resource=announcements', { method: 'POST', body: JSON.stringify({ subject: $('notice-subject').value, meetingTitle: $('notice-title').value, meetingAt: $('notice-date').value, venue: $('notice-venue').value, body: $('notice-body').value, attachmentName: file.name, attachmentType, attachmentContent }) });
         $('announcement-status').textContent = result.message; form.reset(); await loadAnnouncements(); toast(result.message); await processAnnouncement(result.id, button);
       } catch (error) { $('announcement-status').textContent = ''; toast(error.message, true); } finally { button.disabled = false; }
     });
