@@ -176,15 +176,16 @@
       box.innerHTML = ui.announcements.map(item => {
         const total = Number(item.queued) + Number(item.sending) + Number(item.sent) + Number(item.failed);
         const status = item.status === 'sent' ? 'Sent' : item.status === 'completed_with_errors' ? 'Completed with delivery errors' : item.status === 'sending' ? 'Sending' : 'Queued';
-        return '<article class="notice-item"><div><h3>' + escapeHtml(item.meeting_title) + '</h3><div class="notice-progress">' + escapeHtml(item.subject) + ' · ' + status + ' · ' + item.sent + '/' + total + ' delivered' + (Number(item.failed) ? ' · ' + item.failed + ' failed' : '') + '</div></div>' + (Number(item.queued) || Number(item.sending) ? '<button class="btn btn-light" data-resume-notice="' + item.id + '">Resume sending</button>' : '') + '</article>';
+        return '<article class="notice-item"><div><h3>' + escapeHtml(item.meeting_title) + '</h3><div class="notice-progress">' + escapeHtml(item.subject) + ' · ' + status + ' · ' + item.sent + '/' + total + ' delivered' + (Number(item.failed) ? ' · ' + item.failed + ' failed' : '') + '</div></div>' + (Number(item.queued) || Number(item.sending) ? '<button class="btn btn-light" data-resume-notice="' + item.id + '">Resume sending</button>' : '') + (Number(item.failed) ? '<button class="btn btn-light" data-retry-notice="' + item.id + '">Retry failed (' + item.failed + ')</button>' : '') + '</article>';
       }).join('');
       box.querySelectorAll('[data-resume-notice]').forEach(button => button.addEventListener('click', () => processAnnouncement(button.dataset.resumeNotice, button)));
+      box.querySelectorAll('[data-retry-notice]').forEach(button => button.addEventListener('click', () => processAnnouncement(button.dataset.retryNotice, button, true)));
     }
-    async function processAnnouncement(id, button) {
+    async function processAnnouncement(id, button, retryFailed = false) {
       if (button) button.disabled = true;
       try {
         while (true) {
-          const result = await api('announcements/' + encodeURIComponent(id) + '/process', { method: 'POST', body: '{}' });
+          const result = await api('announcements/' + encodeURIComponent(id) + '/process', { method: 'POST', body: JSON.stringify({ retryFailed }) }); retryFailed = false;
           const count = result.counts;
           $('announcement-status').textContent = 'Delivery progress: ' + count.sent + ' sent, ' + count.failed + ' failed, ' + count.queued + ' queued.';
           await loadAnnouncements();
