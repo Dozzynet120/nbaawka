@@ -3,6 +3,117 @@ import { pool } from '../../backend/src/db.js';
 import { currentAdmin } from '../../backend/src/admin-auth.js';
 import { dueAmount } from '../../backend/src/dues.js';
 
+import { sendMemberAnnouncement } from '../../backend/src/mail.js';
+
+export const config = { api: { bodyParser: { sizeLimit: '3mb' } } };
+
+async function ensureAnnouncementTables() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS admin_announcements (
+    id BIGSERIAL PRIMARY KEY, subject TEXT NOT NULL, meeting_title TEXT NOT NULL, meeting_at TEXT NOT NULL DEFAULT '',
+    venue TEXT NOT NULL DEFAULT '', body TEXT NOT NULL, attachment_filename TEXT NOT NULL, attachment_type TEXT NOT NULL,
+    attachment_content TEXT NOT NULL, created_by BIGINT REFERENCES admins(id), created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    status TEXT NOT NULL DEFAULT 'queued'
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS admin_announcement_recipients (
+    id BIGSERIAL PRIMARY KEY, campaign_id BIGINT NOT NULL REFERENCES admin_announcements(id) ON DELETE CASCADE,
+    member_id BIGINT REFERENCES members(id) ON DELETE SET NULL, email TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','sending','sent','failed')),
+    error TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), sent_at TIMESTAMPTZ,
+    UNIQUE(campaign_id,email)
+  )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS admin_announcement_recipients_queue_idx ON admin_announcement_recipients(campaign_id,status,id)');
+}
+
+const announcementInput = z.object({
+  subject: z.string().trim().min(3).max(180),
+  meetingTitle: z.string().trim().min(3).max(180),
+  meetingAt: z.string().trim().max(120).optional().default(''),
+  venue: z.string().trim().max(180).optional().default(''),
+  body: z.string().trim().min(10).max(10000),
+  attachmentName: z.string().trim().min(1).max(180),
+  attachmentType: z.enum(['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/msword']),
+  attachmentContent: z.string().min(1).max(2100000),
+});
+
+function formatCounts(rows) {
+  const counts = { queued: 0, sending: 0, sent: 0, failed: 0 };
+  for (const row of rows) counts[row.status] = Number(row.count);
+  return counts;
+}
+
+async function getAnnouncements(res) {
+  const { rows } = await pool.query(`SELECT a.id,a.subject,a.meeting_title,a.meeting_at,a.venue,a.created_at,a.status,
+    COALESCE(r.queued,0)::int queued,COALESCE(r.sending,0)::int sending,COALESCE(r.sent,0)::int sent,COALESCE(r.failed,0)::int failed
+    FROM admin_announcements a LEFT JOIN (
+      SELECT campaign_id,count(*) FILTER(WHERE status='queued') queued,count(*) FILTER(WHERE status='sending') sending,
+      count(*) FILTER(WHERE status='sent') sent,count(*) FILTER(WHERE status='failed') failed
+      FROM admin_announcement_recipients GROUP BY campaign_id
+    ) r ON r.campaign_id=a.id ORDER BY a.created_at DESC LIMIT 30`);
+  return res.status(200).json({ announcements: rows });
+}
+
+async function createAnnouncement(req, res) {
+  const parsed = announcementInput.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Check the meeting notice details.' });
+  const d = parsed.data;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(d.attachmentContent)) return res.status(400).json({ error: 'The minutes attachment could not be read.' });
+  const bytes = Buffer.from(d.attachmentContent, 'base64');
+  if (!bytes.length || bytes.length > 1572864) return res.status(400).json({ error: 'Attach a PDF or Word minutes file no larger than 1.5 MB.' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const recipients = await client.query("SELECT id FROM members WHERE status='active' AND email_verified_at IS NOT NULL");
+    if (!recipients.rows.length) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'There are no active, email-verified members to receive this notice.' }); }
+    const filename = d.attachmentName.replace(/[^A-Za-z0-9._ -]/g, '_').slice(-120);
+    const inserted = await client.query('INSERT INTO admin_announcements(subject,meeting_title,meeting_at,venue,body,attachment_filename,attachment_type,attachment_content,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+      [d.subject,d.meetingTitle,d.meetingAt,d.venue,d.body,filename,d.attachmentType,bytes.toString('base64'),req.admin.id]);
+    const id = inserted.rows[0].id;
+    await client.query("INSERT INTO admin_announcement_recipients(campaign_id,member_id,email) SELECT $1,id,email FROM members WHERE status='active' AND email_verified_at IS NOT NULL ON CONFLICT(campaign_id,email) DO NOTHING", [id]);
+    await client.query('COMMIT');
+    return res.status(201).json({ id, queued: recipients.rows.length, message: 'Meeting notice queued for ' + recipients.rows.length + ' active, verified members.' });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally { client.release(); }
+}
+
+async function processAnnouncement(req, res) {
+  const id = Number(req.query?.id);
+  if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'A valid meeting notice ID is required.' });
+  const client = await pool.connect();
+  let campaign, claimed = [];
+  try {
+    await client.query('BEGIN');
+    const found = await client.query('SELECT * FROM admin_announcements WHERE id=$1 FOR UPDATE', [id]);
+    if (!found.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Meeting notice not found.' }); }
+    campaign = found.rows[0];
+    if (req.body?.retryFailed === true) await client.query("UPDATE admin_announcement_recipients SET status='queued',error='',updated_at=now() WHERE campaign_id=$1 AND status='failed'", [id]);
+    await client.query("UPDATE admin_announcement_recipients SET status='queued',updated_at=now() WHERE campaign_id=$1 AND status='sending' AND updated_at<now()-interval '10 minutes'", [id]);
+    const batch = await client.query("SELECT id,email FROM admin_announcement_recipients WHERE campaign_id=$1 AND status='queued' ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 3", [id]);
+    claimed = batch.rows;
+    for (const recipient of claimed) await client.query("UPDATE admin_announcement_recipients SET status='sending',updated_at=now() WHERE id=$1", [recipient.id]);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally { client.release(); }
+
+  for (const recipient of claimed) {
+    try {
+      await sendMemberAnnouncement(recipient.email, campaign);
+      await pool.query("UPDATE admin_announcement_recipients SET status='sent',error='',sent_at=now(),updated_at=now() WHERE id=$1", [recipient.id]);
+    } catch (error) {
+      console.error('Member notice delivery failed:', error.message);
+      await pool.query("UPDATE admin_announcement_recipients SET status='failed',error=$2,updated_at=now() WHERE id=$1", [recipient.id, String(error.message || 'Mail delivery failed').slice(0,240)]);
+    }
+  }
+  const { rows } = await pool.query("SELECT status,count(*)::int count FROM admin_announcement_recipients WHERE campaign_id=$1 GROUP BY status", [id]);
+  const counts = formatCounts(rows);
+  const done = counts.queued === 0 && counts.sending === 0;
+  await pool.query('UPDATE admin_announcements SET status=$2 WHERE id=$1', [id, done ? (counts.failed ? 'completed_with_errors' : 'sent') : 'sending']);
+  return res.status(200).json({ id, counts, done });
+}
+
 const duesSchema = z.object({
   memberId: z.coerce.number().int().positive(),
   year: z.coerce.number().int().min(2000).max(2200),
@@ -40,6 +151,12 @@ export default async function handler(req, res) {
   const admin = await currentAdmin(req);
   if (!admin) return res.status(401).json({ error: 'Please sign in to the admin portal.' });
   try {
+    if (req.query?.resource === 'announcements') {
+      await ensureAnnouncementTables();
+      if (req.method === 'GET') return await getAnnouncements(res);
+      if (req.query?.action === 'process') return await processAnnouncement(req, res);
+      return await createAnnouncement(req, res);
+    }
     await ensureDuesTable();
     if (req.method === 'GET') {
       const parsedYear = Number(req.query?.year);
