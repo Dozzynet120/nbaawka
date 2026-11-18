@@ -1,5 +1,5 @@
-async function send(to, subject, text, html) {
- const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{'Authorization':`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:`${process.env.MAIL_FROM_NAME||'NBA Awka Branch'} <${process.env.MAIL_FROM_ADDRESS}>`,to:[to],subject,text,html})});
+async function send(to, subject, text, html, attachments = []) {
+ const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{'Authorization':`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:`${process.env.MAIL_FROM_NAME||'NBA Awka Branch'} <${process.env.MAIL_FROM_ADDRESS}>`,to:[to],subject,text,html,...(attachments.length?{attachments}: {})})});
  if(!response.ok) throw new Error(`Mail provider returned ${response.status}`);
 }
 export async function sendActionEmail(to, subject, url, action) {
@@ -12,3 +12,14 @@ export async function sendApprovalEmail(to, applicant, url) {
 export async function sendAdminSetupEmail(to,url,isInvite=false){const title=isInvite?'NBA Awka admin invitation':'Set up the NBA Awka initial administrator';await send(to,title,`Use this one-time link to set your administrator password: ${url}\n\nThe link expires in 30 minutes. If you did not request this, ignore this email.`,`<p>Use this one-time link to set your administrator password:</p><p><a href="${url}">Set up admin access</a></p><p>The link expires in 30 minutes. If you did not request this, ignore this email.</p>`);}
 export async function sendAdminInviteEmail(to,url){await send(to,'NBA Awka administrator invitation',`You have been invited to administer NBA Awka member applications. Set your password using this one-time link: ${url}\n\nThe link expires in 7 days.`,`<p>You have been invited to administer NBA Awka member applications.</p><p><a href="${url}">Accept invitation and set your password</a></p><p>The link expires in 7 days.</p>`);}
 export async function verifyMailer(){if(!process.env.RESEND_API_KEY)throw Error('Mail provider API key not configured');}
+
+export async function sendMemberAnnouncement(to, campaign) {
+ const esc=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const rows=[['Meeting',campaign.meeting_title],['Date and time',campaign.meeting_at],['Venue',campaign.venue]].filter(([,v])=>v);
+ const details=rows.length?'<table role="presentation" style="width:100%;border-collapse:collapse;margin:20px 0">'+rows.map(([k,v])=>'<tr><td style="padding:9px 12px;color:#496353;border-bottom:1px solid #dce8df;font-weight:600">'+esc(k)+'</td><td style="padding:9px 12px;color:#17251b;border-bottom:1px solid #dce8df">'+esc(v)+'</td></tr>').join('')+'</table>':'';
+ const body=esc(campaign.body).replace(/\n/g,'<br>');
+ const html='<div style="background:#f3f6f3;padding:24px 10px;font-family:Arial,sans-serif;color:#1d2d22"><div style="max-width:640px;margin:auto;background:#fff;border:1px solid #dce8df"><div style="height:7px;background:#2f7b43"></div><div style="padding:20px 28px;border-bottom:1px solid #dce8df;text-align:center;color:#14552d"><strong style="font-size:19px;letter-spacing:.08em">NIGERIAN BAR ASSOCIATION</strong><br><span style="font-size:12px;color:#526759">AWKA BRANCH</span></div><div style="padding:28px"><p style="color:#347446;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:bold">Members’ Notice</p><h1 style="font-size:25px;line-height:1.25;color:#173e27;margin:8px 0 20px">'+esc(campaign.meeting_title)+'</h1>'+details+'<div style="font-size:15px;line-height:1.7">'+body+'</div><p style="margin-top:24px;color:#526759">The minutes of the previous meeting are attached for your reference.</p></div><div style="padding:16px 28px;background:#f3f6f3;color:#637168;font-size:12px">NBA Awka Branch · Member communication</div></div></div>';
+ const text=[campaign.meeting_title,...rows.map(([k,v])=>k+': '+v),'',campaign.body,'','Minutes of the previous meeting are attached.'].join('\n');
+ const attachments=campaign.attachment_content?[{filename:campaign.attachment_filename,content:campaign.attachment_content}]:[];
+ await send(to,campaign.subject,text,html,attachments);
+}
