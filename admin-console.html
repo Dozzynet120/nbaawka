@@ -170,7 +170,7 @@
     }
 
     async function loadAnnouncements() {
-      const data = await api('announcements'); ui.announcements = data.announcements || [];
+      const data = await api('dues?resource=announcements'); ui.announcements = data.announcements || [];
       const box = $('announcements-list');
       if (!ui.announcements.length) { box.innerHTML = '<div class="empty"><b>No notices sent yet</b>Sent notices will appear here.</div>'; return; }
       box.innerHTML = ui.announcements.map(item => {
@@ -185,7 +185,7 @@
       if (button) button.disabled = true;
       try {
         while (true) {
-          const result = await api('announcements/' + encodeURIComponent(id) + '/process', { method: 'POST', body: JSON.stringify({ retryFailed }) }); retryFailed = false;
+          const result = await api('dues?resource=announcements&action=process&id=' + encodeURIComponent(id), { method: 'POST', body: JSON.stringify({ retryFailed }) }); retryFailed = false;
           const count = result.counts;
           $('announcement-status').textContent = 'Delivery progress: ' + count.sent + ' sent, ' + count.failed + ' failed, ' + count.queued + ' queued.';
           await loadAnnouncements();
